@@ -11,3 +11,7 @@ const read = (p) => readFileSync(root + p, 'utf8');
 test('toDTCG matches committed tokens/tokens.json exactly', () => {
   assert.equal(core.toDTCG(core.DEFAULT_CONFIG), read('tokens/tokens.json'));
 });
+
+test('toCSS matches committed build/tokens.css exactly', () => {
+  assert.equal(core.toCSS(core.DEFAULT_CONFIG), read('build/tokens.css'));
+});

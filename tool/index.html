@@ -105,6 +105,34 @@
     return out;
   }
 
+  function toCSS(cfg) {
+    var ramps = buildAllRamps(cfg);
+    var L = [':root {'];
+    var push = function (name, val) { L.push('  --' + name + ': ' + val + ';'); };
+    cfg.color.order.forEach(function (name) {
+      Object.keys(ramps[name]).forEach(function (s) { push('color-' + name + '-' + s, ramps[name][s]); });
+    });
+    push('color-white', cfg.color.base.white);
+    push('color-black', cfg.color.base.black);
+    var each = function (obj, pre) { Object.keys(obj).forEach(function (k) { push(pre + k, obj[k]); }); };
+    each(cfg.fontFamily, 'font-');
+    each(cfg.fontSize, 'font-size-');
+    each(cfg.fontWeight, 'font-weight-');
+    each(cfg.lineHeight, 'leading-');
+    each(cfg.letterSpacing, 'tracking-');
+    each(cfg.space, 'space-');
+    each(cfg.radius, 'radius-');
+    each(cfg.borderWidth, 'border-');
+    each(cfg.opacity, 'opacity-');
+    each(cfg.shadow, 'shadow-');
+    each(cfg.zIndex, 'z-');
+    each(cfg.breakpoint, 'bp-');
+    each(cfg.duration, 'duration-');
+    each(cfg.easing, 'ease-');
+    L.push('}');
+    return L.join('\n') + '\n';
+  }
+
   var DTCG_DESC = 'Master Design System Preset — Foundations (primitive layer). Platform-agnostic, DTCG-aligned.';
   function grp(obj, ttype) {
     var out = {};
@@ -141,7 +169,7 @@
 
   var TokenCore = { pyRound: pyRound, oklchToSrgb: oklchToSrgb, hexof: hexof,
     DEFAULT_CONFIG: DEFAULT_CONFIG, cloneConfig: cloneConfig,
-    buildRamp: buildRamp, buildAllRamps: buildAllRamps, toDTCG: toDTCG };
+    buildRamp: buildRamp, buildAllRamps: buildAllRamps, toCSS: toCSS, toDTCG: toDTCG };
   root.TokenCore = TokenCore;
   if (typeof module !== 'undefined' && module.exports) module.exports = TokenCore;
 })(typeof window !== 'undefined' ? window : globalThis);
