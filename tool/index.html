@@ -387,38 +387,69 @@
 
   var FONT_SIZE_ORDER = ['2xs', 'xs', 'sm', 'md', 'lg', 'xl', '2xl', '3xl', '4xl', '5xl', '6xl'];
 
-  function labeledNumber(id, labelText, value, min, max, step, onInput) {
-    var input = el('input', {
-      type: 'number', id: id, value: String(value), min: String(min), max: String(max), step: String(step),
-      oninput: function (e) { onInput(Number(e.target.value)); }
+  // A color field = a labelled range slider + paired number input, both driving
+  // the same palette key. During a slider DRAG we only repaint live (no store
+  // write, so the DOM node survives and keeps pointer capture); we commit once
+  // on 'change' (drag end / keyboard commit) for exactly one undo step. The
+  // number input commits on its own 'input' (safe: render() restores focus/caret).
+  function colorField(hue, keyName, labelText, value, min, max, step, refs) {
+    var baseId = 'ctl-color-' + hue + '-' + keyName;
+    var number = el('input', {
+      type: 'number', id: baseId, value: String(value),
+      min: String(min), max: String(max), step: String(step),
+      oninput: function (e) {
+        store.setPath(['color', 'palettes', hue, keyName], Number(e.target.value));
+      }
     });
-    var label = el('label', { for: id, text: labelText });
-    return { label: label, input: input };
-  }
-
-  function fieldRow(id, labelText, value, min, max, step, onInput) {
     var range = el('input', {
-      type: 'range', id: id + '-range', 'aria-label': labelText + ' (slider)',
+      type: 'range', id: baseId + '-range', 'aria-label': labelText + ' (slider)',
       value: String(value), min: String(min), max: String(max), step: String(step),
-      oninput: function (e) { onInput(Number(e.target.value)); }
+      oninput: function (e) {
+        var v = Number(e.target.value);
+        number.value = String(v);        // keep paired number in sync, no commit
+        refs.repaint();                  // live swatch repaint, DOM preserved
+      },
+      onchange: function (e) {
+        store.setPath(['color', 'palettes', hue, keyName], Number(e.target.value));
+      }
     });
-    var pair = labeledNumber(id, labelText, value, min, max, step, onInput);
-    return el('div', { class: 'field-row' }, [pair.label, range, pair.input]);
+    refs[keyName] = { number: number, range: range };
+    var label = el('label', { for: baseId, text: labelText });
+    return el('div', { class: 'field-row' }, [label, range, number]);
   }
 
   function renderHueRow(cfg, ramps, hue) {
     var p = cfg.color.palettes[hue];
+    var swatchNodes = {};
     var swatches = C.DEFAULT_CONFIG.steps.map(function (step) {
       var hex = ramps[hue][String(step)];
-      return el('div', { class: 'swatch', style: 'background:' + hex, title: hue + ' ' + step + ' ' + hex });
+      var node = el('div', {
+        class: 'swatch', id: 'swatch-' + hue + '-' + step,
+        style: 'background:' + hex, title: hue + ' ' + step + ' ' + hex
+      });
+      swatchNodes[String(step)] = node;
+      return node;
     });
     var strip = el('div', { class: 'swatch-strip', role: 'img', 'aria-label': hue + ' ramp preview' }, swatches);
-    var hRow = fieldRow('color-' + hue + '-h', 'H', p.H, 0, 360, 1, function (v) {
-      store.setPath(['color', 'palettes', hue, 'H'], v);
-    });
-    var cpkRow = fieldRow('color-' + hue + '-cpk', 'Cpk', p.Cpk, 0, 0.4, 0.005, function (v) {
-      store.setPath(['color', 'palettes', hue, 'Cpk'], v);
-    });
+
+    var refs = {
+      // recompute this hue's ramp from the CURRENT live control values and
+      // repaint the existing swatch nodes in place (no rebuild).
+      repaint: function () {
+        var liveH = Number(refs.H.range.value);
+        var liveCpk = Number(refs.Cpk.range.value);
+        var ramp = C.buildRamp(liveH, liveCpk, cfg.curves.Lc, cfg.curves.Cm);
+        C.DEFAULT_CONFIG.steps.forEach(function (step) {
+          var hex = ramp[String(step)];
+          var node = swatchNodes[String(step)];
+          node.style.background = hex;
+          node.title = hue + ' ' + step + ' ' + hex;
+        });
+      }
+    };
+
+    var hRow = colorField(hue, 'H', 'H', p.H, 0, 360, 1, refs);
+    var cpkRow = colorField(hue, 'Cpk', 'Cpk', p.Cpk, 0, 0.4, 0.005, refs);
     return el('div', { class: 'hue-row' }, [
       el('div', { class: 'hue-title', text: hue }),
       hRow, cpkRow, strip
@@ -427,7 +458,7 @@
 
   function renderCurveEditor(cfg) {
     var lcCells = cfg.curves.Lc.map(function (v, i) {
-      var id = 'curve-lc-' + i;
+      var id = 'ctl-curve-Lc-' + i;
       var input = el('input', {
         type: 'number', id: id, value: String(v), min: '0', max: '1', step: '0.001',
         oninput: function (e) { store.setPath(['curves', 'Lc', i], Number(e.target.value)); }
@@ -436,7 +467,7 @@
       return el('div', { class: 'curve-cell' }, [label, input]);
     });
     var cmCells = cfg.curves.Cm.map(function (v, i) {
-      var id = 'curve-cm-' + i;
+      var id = 'ctl-curve-Cm-' + i;
       var input = el('input', {
         type: 'number', id: id, value: String(v), min: '0', max: '2', step: '0.01',
         oninput: function (e) { store.setPath(['curves', 'Cm', i], Number(e.target.value)); }
@@ -466,7 +497,7 @@
 
   function renderTypePanel(cfg) {
     var rows = FONT_SIZE_ORDER.map(function (key) {
-      var id = 'fontsize-' + key;
+      var id = 'ctl-fontsize-' + key;
       var px = parseFloat(cfg.fontSize[key]);
       var input = el('input', {
         type: 'number', id: id, value: String(px), min: '1', step: '1',
@@ -479,7 +510,7 @@
       return el('div', { class: 'type-row' }, [label, input, el('span', { text: 'px' })]);
     });
 
-    var baseId = 'modscale-base', ratioId = 'modscale-ratio';
+    var baseId = 'ctl-modscale-base', ratioId = 'ctl-modscale-ratio';
     var baseInput = el('input', { type: 'number', id: baseId, value: '16', min: '1', step: '1' });
     var ratioInput = el('input', { type: 'number', id: ratioId, value: '1.25', min: '1', step: '0.01' });
     var applyBtn = el('button', {
@@ -511,6 +542,14 @@
 
   function render() {
     var cfg = store.get();
+
+    // Fix A: preserve focus + caret across the full rebuild. Every interactive
+    // input has a stable id, so we re-find the same field after re-render.
+    var act = document.activeElement;
+    var savedId = act && act.id;
+    var ss = null, se = null;
+    try { ss = act.selectionStart; se = act.selectionEnd; } catch (e) {}
+
     app.innerHTML = '';
 
     var title = el('h1', { text: 'Foundations Token Studio' });
@@ -529,6 +568,16 @@
 
     app.appendChild(leftCol);
     app.appendChild(rightCol);
+
+    if (savedId) {
+      var n = document.getElementById(savedId);
+      if (n) {
+        n.focus();
+        if (ss != null && n.setSelectionRange) {
+          try { n.setSelectionRange(ss, se); } catch (e) {}
+        }
+      }
+    }
   }
   window.Studio.render = render;
   store.subscribe(render);
