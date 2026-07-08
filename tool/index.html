@@ -47,6 +47,14 @@
   .modular-scale .field { display: flex; flex-direction: column; gap: 2px; }
   .modular-scale label { font-size: 11px; color: #555; }
   .modular-scale input { width: 90px; }
+  .kv-group-body { display: flex; flex-direction: column; gap: 6px; }
+  .kv-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 4px 0; border-top: 1px solid #eee; }
+  .kv-row:first-child { border-top: none; }
+  .kv-row input[type="text"] { padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; font: inherit; }
+  .kv-row .kv-key { flex: 0 1 110px; min-width: 70px; }
+  .kv-row .kv-val { flex: 1 1 160px; min-width: 100px; }
+  .kv-msg { flex-basis: 100%; font-size: 11px; color: #b91c1c; }
+  .kv-add-row { margin-top: 4px; }
   button {
     font: inherit; cursor: pointer; border: 1px solid #999; background: #f0f0f0;
     border-radius: 4px; padding: 6px 12px;
@@ -74,6 +82,9 @@
     button { background: #2c2c2c; border-color: #555; color: #eee; }
     button:hover { background: #383838; }
     .modular-scale { border-top-color: #444; }
+    .kv-row { border-top-color: #333; }
+    .kv-row input[type="text"] { background: #1a1a1a; border-color: #555; color: #eee; }
+    .kv-msg { color: #fca5a5; }
   }
 </style>
 </head>
@@ -540,6 +551,146 @@
     ]);
   }
 
+  // ---- List-scale (key/value) editors ----------------------------------
+  // A "group" is a flat object like cfg.space = {'0':'0px','1':'4px',...}.
+  // Renaming/adding/removing a key rebuilds the whole object (order preserved
+  // via the live key list, then a single setGroup commit) rather than
+  // mutating in place, since plain JS objects have no stable key-rename op.
+  function setGroup(groupKey, obj) {
+    store.setPath([groupKey], obj);
+  }
+
+  function showKVMessage(msgEl, text) {
+    if (!msgEl) return;
+    msgEl.textContent = text;
+    if (msgEl._kvClearTimer) clearTimeout(msgEl._kvClearTimer);
+    msgEl._kvClearTimer = setTimeout(function () { msgEl.textContent = ''; }, 4000);
+  }
+
+  // Renders one row per entry of store.get()[groupKey], plus an "Add row"
+  // button. Row ids are INDEX-based (ctl-kv-<groupKey>-<i>-key/-val), not
+  // key-based, because the key text itself is editable — an id derived from
+  // the key would change out from under focus-preservation on every
+  // keystroke of a rename. Index stays stable across re-renders as long as
+  // rows aren't added/removed, which is exactly when focus needs to survive
+  // (plain value edits, and key edits prior to the commit that revalidates).
+  function renderKVGroup(groupKey, opts) {
+    opts = opts || {};
+    var labelText = opts.label || groupKey;
+    var placeholder = opts.placeholder || '';
+    var cfg = store.get();
+    var group = cfg[groupKey] || {};
+    var keys = Object.keys(group);
+
+    var rows = keys.map(function (key, i) {
+      var keyId = 'ctl-kv-' + groupKey + '-' + i + '-key';
+      var valId = 'ctl-kv-' + groupKey + '-' + i + '-val';
+      var msgId = 'ctl-kv-' + groupKey + '-' + i + '-msg';
+
+      // Key rename commits on 'change' (blur/Enter), not 'input'. Unlike
+      // value edits, a key is validated (non-empty, unique in this group)
+      // before it can commit; validating per-keystroke would revert the
+      // field mid-edit (e.g. the instant a user backspaces it to empty),
+      // making it impossible to actually clear-and-retype a key. Committing
+      // once the user leaves the field keeps the guard from fighting typing.
+      var keyInput = el('input', {
+        type: 'text', id: keyId, class: 'kv-key', value: key,
+        'aria-label': labelText + ' 키 ' + (i + 1),
+        onkeydown: function (e) { if (e.key === 'Enter') e.target.blur(); },
+        onchange: function (e) {
+          var newKey = e.target.value;
+          var msgEl = document.getElementById(msgId);
+          if (newKey === key) return; // unchanged, nothing to do
+          var liveGroup = store.get()[groupKey];
+          var liveKeys = Object.keys(liveGroup);
+          if (newKey === '') {
+            e.target.value = key;
+            showKVMessage(msgEl, '키는 비워둘 수 없습니다.');
+            return;
+          }
+          if (liveKeys.indexOf(newKey) !== -1) {
+            e.target.value = key;
+            showKVMessage(msgEl, '이미 존재하는 키입니다: ' + newKey);
+            return;
+          }
+          var next = {};
+          liveKeys.forEach(function (k) {
+            next[k === key ? newKey : k] = liveGroup[k];
+          });
+          setGroup(groupKey, next);
+        }
+      });
+
+      var valInput = el('input', {
+        type: 'text', id: valId, class: 'kv-val', value: group[key], placeholder: placeholder,
+        'aria-label': labelText + ' 값 (' + key + ')',
+        oninput: function (e) {
+          store.setPath([groupKey, key], e.target.value);
+        }
+      });
+
+      var removeBtn = el('button', {
+        type: 'button', text: '삭제', 'aria-label': labelText + ' 항목 삭제: ' + key,
+        onclick: function () {
+          var liveGroup = store.get()[groupKey];
+          var next = {};
+          Object.keys(liveGroup).forEach(function (k) { if (k !== key) next[k] = liveGroup[k]; });
+          setGroup(groupKey, next);
+        }
+      });
+
+      var msg = el('span', { id: msgId, class: 'kv-msg', role: 'alert', 'aria-live': 'polite' });
+
+      return el('div', { class: 'kv-row' }, [keyInput, valInput, removeBtn, msg]);
+    });
+
+    var addBtn = el('button', {
+      type: 'button', class: 'kv-add-row', text: '행 추가',
+      onclick: function () {
+        var liveGroup = store.get()[groupKey];
+        var liveKeys = Object.keys(liveGroup);
+        var base = 'new', candidate = base, n = 1;
+        while (liveKeys.indexOf(candidate) !== -1) { candidate = base + n; n++; }
+        var next = {};
+        liveKeys.forEach(function (k) { next[k] = liveGroup[k]; });
+        next[candidate] = opts.newValue != null ? opts.newValue : '';
+        setGroup(groupKey, next);
+      }
+    });
+
+    return el('div', { class: 'kv-group-body' }, rows.concat([addBtn]));
+  }
+
+  function renderKVSection(groupKey, labelText, opts) {
+    var sectionOpts = Object.assign({ label: labelText }, opts || {});
+    return el('details', { class: 'group' }, [
+      el('summary', { text: labelText }),
+      el('div', { class: 'group-body' }, [renderKVGroup(groupKey, sectionOpts)])
+    ]);
+  }
+
+  var KV_GROUPS = [
+    ['space', '간격(space)', { placeholder: '예: 16px' }],
+    ['radius', '모서리(radius)', { placeholder: '예: 8px' }],
+    ['borderWidth', '테두리 두께(borderWidth)', { placeholder: '예: 2px' }],
+    ['opacity', '불투명도(opacity)', { placeholder: '예: 0.5' }],
+    ['shadow', '그림자(shadow)', { placeholder: '예: 0 2px 6px rgba(0,0,0,.1)' }],
+    ['zIndex', '쌓임 순서(zIndex)', { placeholder: '예: 1000' }],
+    ['breakpoint', '브레이크포인트(breakpoint)', { placeholder: '예: 768px' }],
+    ['duration', '지속시간(duration)', { placeholder: '예: 200ms' }],
+    ['easing', '이징(easing)', { placeholder: '예: cubic-bezier(0.4,0,0.2,1)' }],
+    ['fontFamily', '폰트 패밀리(fontFamily)', { placeholder: '예: Pretendard, sans-serif' }],
+    ['fontWeight', '폰트 굵기(fontWeight)', { placeholder: '예: 600' }],
+    ['lineHeight', '줄 높이(lineHeight)', { placeholder: '예: 1.5' }],
+    ['letterSpacing', '자간(letterSpacing)', { placeholder: '예: 0.025em' }]
+  ];
+
+  function renderListPanels() {
+    return KV_GROUPS.map(function (entry) {
+      return renderKVSection(entry[0], entry[1], entry[2]);
+    });
+  }
+
   function render() {
     var cfg = store.get();
 
@@ -559,7 +710,7 @@
       title,
       renderColorPanel(cfg),
       renderTypePanel(cfg)
-    ]);
+    ].concat(renderListPanels()));
 
     var rightCol = el('div', { class: 'preview-col' }, [
       el('h2', { text: 'Preview' }),
