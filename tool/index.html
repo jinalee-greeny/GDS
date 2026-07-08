@@ -55,6 +55,44 @@
   .kv-row .kv-val { flex: 1 1 160px; min-width: 100px; }
   .kv-msg { flex-basis: 100%; font-size: 11px; color: #b91c1c; }
   .kv-add-row { margin-top: 4px; }
+  .pv-block { border: 1px solid #ddd; border-radius: 6px; margin-bottom: 12px; padding: 10px 12px; background: #fff; }
+  .pv-block h3 { font-size: 13px; margin: 0 0 8px; text-transform: capitalize; }
+  .pv-hint { font-size: 11px; color: #666; margin: 0 0 8px; }
+  .pv-color-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+  .pv-color-label { min-width: 52px; font-size: 12px; text-transform: capitalize; color: #444; }
+  .pv-color-col { flex: 1; min-width: 0; }
+  .pv-color-strip { display: flex; border-radius: 4px; overflow: hidden; border: 1px solid #ccc; }
+  .pv-color-swatch { flex: 1; height: 32px; }
+  .pv-color-caption-row { display: flex; margin-top: 2px; }
+  .pv-color-caption { flex: 1; font-size: 8px; text-align: center; color: #777; }
+  .pv-type-row { display: flex; align-items: baseline; gap: 10px; margin: 6px 0; border-top: 1px solid #eee; padding-top: 6px; }
+  .pv-type-row:first-of-type { border-top: none; padding-top: 0; }
+  .pv-type-label { min-width: 84px; font-size: 11px; color: #666; flex-shrink: 0; }
+  .pv-type-line { white-space: nowrap; overflow-x: auto; min-width: 0; }
+  .pv-space-row { display: flex; align-items: center; gap: 8px; margin: 5px 0; }
+  .pv-space-label { min-width: 80px; font-size: 11px; color: #666; flex-shrink: 0; }
+  .pv-space-bar { height: 14px; background: #2563eb; border-radius: 2px; min-width: 1px; }
+  .pv-flex-wrap { display: flex; flex-wrap: wrap; gap: 14px; }
+  .pv-item { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .pv-item-label { font-size: 10px; color: #666; }
+  .pv-radius-box { width: 44px; height: 44px; background: #2563eb; }
+  .pv-border-box { width: 44px; height: 44px; background: #fff; border-color: #2563eb; }
+  .pv-shadow-box { width: 44px; height: 44px; background: #fff; border-radius: 6px; }
+  .pv-opacity-block .pv-flex-wrap { padding: 8px; border-radius: 6px;
+    background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%);
+    background-size: 14px 14px; background-position: 0 0, 0 7px, 7px -7px, -7px 0; }
+  .pv-opacity-box { width: 44px; height: 44px; background: #2563eb; border-radius: 6px; }
+  .pv-motion-row { margin: 8px 0; border-top: 1px solid #eee; padding-top: 8px; }
+  .pv-motion-row:first-of-type { border-top: none; padding-top: 0; }
+  .pv-motion-row-label { font-size: 11px; color: #666; margin-bottom: 6px; }
+  .pv-motion-cells { display: flex; flex-wrap: wrap; gap: 16px; }
+  .pv-motion-cell { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; width: 130px; overflow: hidden; }
+  .pv-motion-box { width: 30px; height: 30px; border-radius: 6px; background: #2563eb; transform: translateX(0); }
+  .pv-motion-box:hover, .pv-motion-box.playing { transform: translateX(84px); }
+  @media (prefers-reduced-motion: reduce) {
+    .pv-motion-box { transition-duration: 0ms !important; }
+  }
   button {
     font: inherit; cursor: pointer; border: 1px solid #999; background: #f0f0f0;
     border-radius: 4px; padding: 6px 12px;
@@ -85,6 +123,14 @@
     .kv-row { border-top-color: #333; }
     .kv-row input[type="text"] { background: #1a1a1a; border-color: #555; color: #eee; }
     .kv-msg { color: #fca5a5; }
+    .pv-block { background: #232323; border-color: #3a3a3a; }
+    .pv-type-row, .pv-motion-row { border-top-color: #333; }
+    .pv-color-label, .pv-type-label, .pv-space-label, .pv-item-label, .pv-motion-row-label, .pv-hint, .pv-color-caption { color: #aaa; }
+    .pv-border-box, .pv-shadow-box { background: #1a1a1a; }
+    .pv-opacity-block .pv-flex-wrap {
+      background-image: linear-gradient(45deg, #444 25%, transparent 25%), linear-gradient(-45deg, #444 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #444 75%), linear-gradient(-45deg, transparent 75%, #444 75%);
+    }
   }
 </style>
 </head>
@@ -691,6 +737,149 @@
     });
   }
 
+  // ---- Live preview panel (right column) --------------------------------
+  // Read-only: every renderer below derives its output purely from
+  // store.get() (and C.buildAllRamps for color), never writes to the store,
+  // and contains no focusable controls — so it cannot interfere with the
+  // focus-preservation logic in render().
+  var TYPE_SAMPLE = '다람쥐 헌 쳇바퀴에 타고파 Ag 123';
+
+  function renderColorPreview(cfg, ramps) {
+    var rows = cfg.color.order.map(function (hue) {
+      var swatches = C.DEFAULT_CONFIG.steps.map(function (step) {
+        var hex = ramps[hue][String(step)];
+        return el('div', { class: 'pv-color-swatch', style: 'background:' + hex, title: hue + ' ' + step + ' ' + hex });
+      });
+      var captions = C.DEFAULT_CONFIG.steps.map(function (step) {
+        return el('div', { class: 'pv-color-caption', text: String(step) });
+      });
+      var col = el('div', { class: 'pv-color-col' }, [
+        el('div', { class: 'pv-color-strip', role: 'img', 'aria-label': hue + ' ramp' }, swatches),
+        el('div', { class: 'pv-color-caption-row' }, captions)
+      ]);
+      return el('div', { class: 'pv-color-row' }, [el('div', { class: 'pv-color-label', text: hue }), col]);
+    });
+    return el('div', { class: 'pv-block' }, [el('h3', { text: 'Color' })].concat(rows));
+  }
+
+  function renderTypePreview(cfg) {
+    var rows = FONT_SIZE_ORDER.map(function (key) {
+      var px = cfg.fontSize[key];
+      var line = el('div', {
+        class: 'pv-type-line',
+        style: 'font-size:' + px + ';font-family:' + cfg.fontFamily.sans + ';',
+        text: TYPE_SAMPLE
+      });
+      return el('div', { class: 'pv-type-row' }, [el('div', { class: 'pv-type-label', text: key + ' / ' + px }), line]);
+    });
+    return el('div', { class: 'pv-block' }, [el('h3', { text: 'Type' })].concat(rows));
+  }
+
+  function renderSpacingPreview(cfg) {
+    var rows = Object.keys(cfg.space).map(function (key) {
+      var val = cfg.space[key];
+      var bar = el('div', { class: 'pv-space-bar', style: 'width:' + val });
+      return el('div', { class: 'pv-space-row' }, [el('div', { class: 'pv-space-label', text: key + ' / ' + val }), bar]);
+    });
+    return el('div', { class: 'pv-block' }, [el('h3', { text: 'Spacing' })].concat(rows));
+  }
+
+  function renderRadiusPreview(cfg) {
+    var items = Object.keys(cfg.radius).map(function (key) {
+      var val = cfg.radius[key];
+      var box = el('div', { class: 'pv-radius-box', style: 'border-radius:' + val });
+      return el('div', { class: 'pv-item' }, [box, el('div', { class: 'pv-item-label', text: key + ' / ' + val })]);
+    });
+    return el('div', { class: 'pv-block' }, [el('h3', { text: 'Radius' }), el('div', { class: 'pv-flex-wrap' }, items)]);
+  }
+
+  function renderBorderPreview(cfg) {
+    var items = Object.keys(cfg.borderWidth).map(function (key) {
+      var val = cfg.borderWidth[key];
+      var box = el('div', { class: 'pv-border-box', style: 'border-style:solid;border-width:' + val });
+      return el('div', { class: 'pv-item' }, [box, el('div', { class: 'pv-item-label', text: key + ' / ' + val })]);
+    });
+    return el('div', { class: 'pv-block' }, [el('h3', { text: 'Border width' }), el('div', { class: 'pv-flex-wrap' }, items)]);
+  }
+
+  function renderShadowPreview(cfg) {
+    var items = Object.keys(cfg.shadow).map(function (key) {
+      var val = cfg.shadow[key];
+      var box = el('div', { class: 'pv-shadow-box', style: 'box-shadow:' + val });
+      return el('div', { class: 'pv-item' }, [box, el('div', { class: 'pv-item-label', text: key })]);
+    });
+    return el('div', { class: 'pv-block' }, [el('h3', { text: 'Shadow' }), el('div', { class: 'pv-flex-wrap' }, items)]);
+  }
+
+  function renderOpacityPreview(cfg) {
+    var items = Object.keys(cfg.opacity).map(function (key) {
+      var val = cfg.opacity[key];
+      var box = el('div', { class: 'pv-opacity-box', style: 'opacity:' + val });
+      return el('div', { class: 'pv-item' }, [box, el('div', { class: 'pv-item-label', text: key + ' / ' + val })]);
+    });
+    return el('div', { class: 'pv-block pv-opacity-block' }, [el('h3', { text: 'Opacity' }), el('div', { class: 'pv-flex-wrap' }, items)]);
+  }
+
+  // Motion demo: transition duration/easing come from the live config via
+  // inline `transition`, so any store change is reflected without extra
+  // wiring. Trigger is CSS :hover (no store write) plus an optional "Play
+  // all" button that toggles a class briefly — not an autoplay loop.
+  function renderMotionPreview(cfg) {
+    var reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    var durationKeys = Object.keys(cfg.duration);
+    var easingKeys = Object.keys(cfg.easing);
+    var boxRefs = [];
+    var maxMs = durationKeys.reduce(function (max, k) { return Math.max(max, parseFloat(cfg.duration[k]) || 0); }, 0);
+
+    var rows = durationKeys.map(function (dKey) {
+      var dVal = cfg.duration[dKey];
+      var cells = easingKeys.map(function (eKey) {
+        var eVal = cfg.easing[eKey];
+        var box = el('div', {
+          class: 'pv-motion-box',
+          style: 'transition:transform ' + dVal + ' ' + eVal + ';',
+          title: dKey + ' (' + dVal + ') / ' + eKey
+        });
+        boxRefs.push(box);
+        return el('div', { class: 'pv-motion-cell' }, [box, el('div', { class: 'pv-item-label', text: eKey })]);
+      });
+      return el('div', { class: 'pv-motion-row' }, [
+        el('div', { class: 'pv-motion-row-label', text: dKey + ' / ' + dVal }),
+        el('div', { class: 'pv-motion-cells' }, cells)
+      ]);
+    });
+
+    var playBtn = el('button', {
+      type: 'button', text: 'Play all',
+      onclick: function () {
+        boxRefs.forEach(function (box) { box.classList.add('playing'); });
+        setTimeout(function () {
+          boxRefs.forEach(function (box) { box.classList.remove('playing'); });
+        }, reduceMotion ? 0 : maxMs + 300);
+      }
+    });
+
+    return el('div', { class: 'pv-block' }, [
+      el('h3', { text: 'Motion' }),
+      el('p', { class: 'pv-hint', text: 'Hover a box, or press Play all (respects reduced-motion).' }),
+      playBtn
+    ].concat(rows));
+  }
+
+  function renderPreview(cfg) {
+    var ramps = C.buildAllRamps(cfg);
+    return [
+      renderColorPreview(cfg, ramps),
+      renderTypePreview(cfg),
+      renderSpacingPreview(cfg),
+      renderRadiusPreview(cfg),
+      renderBorderPreview(cfg),
+      renderShadowPreview(cfg),
+      renderOpacityPreview(cfg),
+      renderMotionPreview(cfg)
+    ];
+  }
+
   function render() {
     var cfg = store.get();
 
@@ -713,9 +902,8 @@
     ].concat(renderListPanels()));
 
     var rightCol = el('div', { class: 'preview-col' }, [
-      el('h2', { text: 'Preview' }),
-      el('p', { text: 'Live preview panel is built in a later task.' })
-    ]);
+      el('h2', { text: 'Preview' })
+    ].concat(renderPreview(cfg)));
 
     app.appendChild(leftCol);
     app.appendChild(rightCol);
