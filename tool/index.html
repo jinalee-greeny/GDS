@@ -480,6 +480,11 @@
   window.Studio = { store: store, C: C };
 
   function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
+  function getAtPath(obj, path) {
+    var node = obj;
+    for (var i = 0; i < path.length; i++) node = node[path[i]];
+    return node;
+  }
 
   // ---- Cross-cutting UI state preserved across the full-rebuild render() ---
   // render() nukes and rebuilds the whole DOM on every store change (see
@@ -568,15 +573,25 @@
     var baseId = 'ctl-color-' + hue + '-' + keyName;
     var hintId = baseId + '-hint';
     function commitClamped(raw) {
-      var v = clamp(Number(raw), min, max);
-      store.setPath(['color', 'palettes', hue, keyName], v);
-      return v;
+      // On blur/Enter: if the field is empty or non-numeric, restore it to
+      // the live store value instead of snapping to 0 — a blurred-empty
+      // field must never linger blank nor corrupt the palette.
+      if (raw === '' || isNaN(Number(raw))) {
+        number.value = String(store.get().color.palettes[hue][keyName]);
+        return;
+      }
+      store.setPath(['color', 'palettes', hue, keyName], clamp(Number(raw), min, max));
     }
     var number = el('input', {
       type: 'number', id: baseId, value: String(value),
       min: String(min), max: String(max), step: String(step), 'aria-describedby': hintId,
       oninput: function (e) {
-        store.setPath(['color', 'palettes', hue, keyName], Number(e.target.value));
+        var raw = e.target.value;
+        // Don't commit while the field is mid-edit-empty or non-numeric; this
+        // lets the user clear-and-retype without the value snapping to 0 and
+        // triggering a rebuild.
+        if (raw === '' || isNaN(Number(raw))) return;
+        store.setPath(['color', 'palettes', hue, keyName], Number(raw));
       },
       onchange: function (e) { commitClamped(e.target.value); }
     });
@@ -636,11 +651,18 @@
 
   function renderCurveEditor(cfg) {
     function curveCell(id, label, path, v, lo, hi, step) {
-      function commitClamped(raw) { store.setPath(path, clamp(Number(raw), lo, hi)); }
       var input = el('input', {
         type: 'number', id: id, value: String(v), min: String(lo), max: String(hi), step: String(step),
-        oninput: function (e) { store.setPath(path, Number(e.target.value)); },
-        onchange: function (e) { commitClamped(e.target.value); }
+        oninput: function (e) {
+          var raw = e.target.value;
+          if (raw === '' || isNaN(Number(raw))) return; // allow clear-and-retype
+          store.setPath(path, Number(raw));
+        },
+        onchange: function (e) {
+          var raw = e.target.value;
+          if (raw === '' || isNaN(Number(raw))) { input.value = String(getAtPath(store.get(), path)); return; }
+          store.setPath(path, clamp(Number(raw), lo, hi));
+        }
       });
       var lbl = el('label', { for: id, text: label });
       return el('div', { class: 'curve-cell' }, [lbl, input]);
@@ -677,17 +699,18 @@
     var rows = FONT_SIZE_ORDER.map(function (key) {
       var id = 'ctl-fontsize-' + key;
       var px = parseFloat(cfg.fontSize[key]);
-      function commitClamped(raw) {
-        var n = clamp(Number(raw), 0, 999);
-        store.setPath(['fontSize', key], String(n) + 'px');
-      }
       var input = el('input', {
         type: 'number', id: id, value: String(px), min: '0', step: '1',
         oninput: function (e) {
-          var n = Number(e.target.value);
-          store.setPath(['fontSize', key], String(n) + 'px');
+          var raw = e.target.value;
+          if (raw === '' || isNaN(Number(raw))) return; // allow clear-and-retype
+          store.setPath(['fontSize', key], String(Number(raw)) + 'px'); // stays 'Npx'
         },
-        onchange: function (e) { commitClamped(e.target.value); }
+        onchange: function (e) {
+          var raw = e.target.value;
+          if (raw === '' || isNaN(Number(raw))) { input.value = String(parseFloat(store.get().fontSize[key])); return; }
+          store.setPath(['fontSize', key], String(clamp(Number(raw), 0, 999)) + 'px');
+        }
       });
       var label = el('label', { for: id, text: key });
       return el('div', { class: 'type-row' }, [label, input, el('span', { text: 'px' })]);
@@ -1408,7 +1431,10 @@
     if (focusId) {
       var n = document.getElementById(focusId);
       if (n) {
-        n.focus();
+        // preventScroll: the scrollTop we just restored above must win — a
+        // plain focus() would scroll the column to bring the field into view
+        // and undo the restored position.
+        try { n.focus({ preventScroll: true }); } catch (e) { n.focus(); }
         if (state.savedId && state.ss != null && n.setSelectionRange) {
           try { n.setSelectionRange(state.ss, state.se); } catch (e) {}
         }
@@ -1450,24 +1476,19 @@
   render();
 
   // Global undo/redo shortcuts (heuristic #3). Registered once (not inside
-  // render()) so re-renders never pile up duplicate listeners. Skipped while
-  // focus is inside a field with native single-keystroke text undo (text
-  // inputs AND number inputs — H/Cpk/fontSize/curve/modular controls) so
-  // Cmd/Ctrl+Z there still performs the browser's in-field undo instead of
-  // surprising the user by jumping the whole app's history (heuristic #4:
-  // don't fight platform conventions). `range` is deliberately EXCLUDED —
-  // sliders have no native text-undo, so app-level store undo is the correct
-  // behavior there; everything outside a text-editable field also falls
-  // through to app-level undo/redo.
+  // render()) so re-renders never pile up duplicate listeners. This ALWAYS
+  // drives store.undo()/redo(), even when a text/number field is focused, and
+  // never defers to native in-field undo. Rationale: this is a
+  // single-document state app where every editable control commits to the
+  // store on each keystroke, so store history is already keystroke-granular;
+  // meanwhile native field undo is non-functional here because render() does
+  // app.innerHTML='' + rebuild on every commit, so the focused input is a
+  // fresh node with an EMPTY native undo stack. Deferring to the browser
+  // would undo nothing AND suppress app undo — undo would be dead while
+  // editing. Global store undo (design-canvas model) is the correct behavior.
   document.addEventListener('keydown', function (e) {
     var key = e.key ? e.key.toLowerCase() : '';
     if (!(e.ctrlKey || e.metaKey) || key !== 'z') return;
-    var t = document.activeElement;
-    var tag = t && t.tagName;
-    var isTextEditable = tag === 'TEXTAREA' ||
-      (tag === 'INPUT' && /^(text|search|email|url|tel|password|number)$/i.test(t.type)) ||
-      (t && t.isContentEditable);
-    if (isTextEditable) return;
     e.preventDefault();
     if (e.shiftKey) store.redo(); else store.undo();
   });
