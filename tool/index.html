@@ -249,10 +249,43 @@
     });
   }
 
+  function deepEqual(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
+
+  function createStore(initial) {
+    var current = cloneConfig(initial || DEFAULT_CONFIG);
+    var undoStack = [], redoStack = [], subs = [];
+    function notify() { subs.forEach(function (fn) { fn(current); }); }
+    function commit(next) {
+      undoStack.push(current);
+      redoStack = [];
+      current = next;
+      notify();
+    }
+    function setPath(path, value) {
+      var next = cloneConfig(current), node = next;
+      for (var i = 0; i < path.length - 1; i++) node = node[path[i]];
+      node[path[path.length - 1]] = value;
+      commit(next);
+    }
+    return {
+      get: function () { return current; },
+      setPath: setPath,
+      undo: function () { if (!undoStack.length) return false; redoStack.push(current); current = undoStack.pop(); notify(); return true; },
+      redo: function () { if (!redoStack.length) return false; undoStack.push(current); current = redoStack.pop(); notify(); return true; },
+      canUndo: function () { return undoStack.length > 0; },
+      canRedo: function () { return redoStack.length > 0; },
+      isDirty: function () { return !deepEqual(current, DEFAULT_CONFIG); },
+      resetAll: function () { commit(cloneConfig(DEFAULT_CONFIG)); },
+      resetGroup: function (key) { var next = cloneConfig(current); next[key] = cloneConfig(DEFAULT_CONFIG[key]); commit(next); },
+      loadConfig: function (cfg) { commit(cloneConfig(cfg)); },
+      subscribe: function (fn) { subs.push(fn); return function () { subs = subs.filter(function (s) { return s !== fn; }); }; }
+    };
+  }
+
   var TokenCore = { pyRound: pyRound, oklchToSrgb: oklchToSrgb, hexof: hexof,
     DEFAULT_CONFIG: DEFAULT_CONFIG, cloneConfig: cloneConfig,
     buildRamp: buildRamp, buildAllRamps: buildAllRamps, toCSS: toCSS, toDTCG: toDTCG, toTailwind: toTailwind, toFigma: toFigma,
-    relLuminance: relLuminance, contrastRatio: contrastRatio, contrastReport: contrastReport };
+    relLuminance: relLuminance, contrastRatio: contrastRatio, contrastReport: contrastReport, createStore: createStore };
   root.TokenCore = TokenCore;
   if (typeof module !== 'undefined' && module.exports) module.exports = TokenCore;
 })(typeof window !== 'undefined' ? window : globalThis);

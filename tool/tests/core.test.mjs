@@ -51,3 +51,38 @@ test('contrastReport reproduces GUIDE.md AA results', () => {
     assert.equal(by[h].blackMaxStep, '600', h + ' blackMaxStep');
   }
 });
+
+test('store setPath / undo / redo / dirty', () => {
+  const s = core.createStore();
+  assert.equal(s.isDirty(), false);
+  assert.equal(s.canUndo(), false);
+  s.setPath(['color','palettes','blue','H'], 200);
+  assert.equal(s.get().color.palettes.blue.H, 200);
+  assert.equal(s.isDirty(), true);
+  assert.equal(s.canUndo(), true);
+  s.undo();
+  assert.equal(s.get().color.palettes.blue.H, 255);
+  assert.equal(s.isDirty(), false);
+  s.redo();
+  assert.equal(s.get().color.palettes.blue.H, 200);
+});
+
+test('store resetGroup restores one group only', () => {
+  const s = core.createStore();
+  s.setPath(['color','palettes','blue','H'], 200);
+  s.setPath(['space','4'], '20px');
+  s.resetGroup('color');
+  assert.equal(s.get().color.palettes.blue.H, 255);
+  assert.equal(s.get().space['4'], '20px'); // untouched
+});
+
+test('store subscribe fires on mutation', () => {
+  const s = core.createStore();
+  let calls = 0;
+  const off = s.subscribe(() => { calls++; });
+  s.setPath(['space','4'], '20px');
+  assert.equal(calls, 1);
+  off();
+  s.setPath(['space','4'], '24px');
+  assert.equal(calls, 1);
+});
