@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Foundations Token Studio</title>
+</head>
+<body>
+<div id="app"></div>
+
+<script id="token-core">
+// ---- pure, DOM-free core. Exposed on window.TokenCore and module.exports ----
+(function (root) {
+  'use strict';
+
+  // Python round(): round half to even
+  function pyRound(x) {
+    var f = Math.floor(x);
+    var diff = x - f;
+    if (diff < 0.5) return f;
+    if (diff > 0.5) return f + 1;
+    return (f % 2 === 0) ? f : f + 1;
+  }
+
+  // OKLCH -> sRGB (ported verbatim from build_tokens.py)
+  function oklchToSrgb(L, C, Hdeg) {
+    var h = Hdeg * Math.PI / 180;
+    var a = C * Math.cos(h), b = C * Math.sin(h);
+    var l_ = L + 0.3963377774 * a + 0.2158037573 * b;
+    var m_ = L - 0.1055613458 * a - 0.0638541728 * b;
+    var s_ = L - 0.0894841775 * a - 1.2914855480 * b;
+    var l = l_ * l_ * l_, m = m_ * m_ * m_, s = s_ * s_ * s_;
+    var r = 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s;
+    var g = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s;
+    var bb = -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s;
+    function enc(x) {
+      x = Math.max(0, Math.min(1, x));
+      return x <= 0.0031308 ? 12.92 * x : 1.055 * Math.pow(x, 1 / 2.4) - 0.055;
+    }
+    return [r, g, bb].map(function (v) { return pyRound(enc(v) * 255); });
+  }
+
+  function hex2(n) { return ('0' + n.toString(16).toUpperCase()).slice(-2); }
+  function hexof(L, C, Hdeg) {
+    var rgb = oklchToSrgb(L, C, Hdeg);
+    return '#' + hex2(rgb[0]) + hex2(rgb[1]) + hex2(rgb[2]);
+  }
+
+  var TokenCore = { pyRound: pyRound, oklchToSrgb: oklchToSrgb, hexof: hexof };
+  root.TokenCore = TokenCore;
+  if (typeof module !== 'undefined' && module.exports) module.exports = TokenCore;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+
+<script>
+// ---- UI (added in later tasks) ----
+</script>
+</body>
+</html>
