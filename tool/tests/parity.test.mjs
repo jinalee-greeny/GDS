@@ -19,3 +19,7 @@ test('toCSS matches committed build/tokens.css exactly', () => {
 test('toTailwind matches committed build/tailwind.preset.js exactly', () => {
   assert.equal(core.toTailwind(core.DEFAULT_CONFIG), read('build/tailwind.preset.js'));
 });
+
+test('toFigma matches committed build/tokens.figma.json exactly', () => {
+  assert.equal(core.toFigma(core.DEFAULT_CONFIG), read('build/tokens.figma.json'));
+});

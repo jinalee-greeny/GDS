@@ -193,9 +193,39 @@
     return '// Tailwind preset generated from tokens.json (SSOT)\nmodule.exports = ' + JSON.stringify(tw, null, 2) + ';\n';
   }
 
+  function tsGrp(obj, type) {
+    var out = {};
+    Object.keys(obj).forEach(function (k) { out[k] = { value: obj[k], type: type }; });
+    return out;
+  }
+  function toFigma(cfg) {
+    var ramps = buildAllRamps(cfg);
+    var color = {};
+    cfg.color.order.forEach(function (name) {
+      var g = {};
+      Object.keys(ramps[name]).forEach(function (s) { g[s] = { value: ramps[name][s], type: 'color' }; });
+      color[name] = g;
+    });
+    color.base = { white: { value: cfg.color.base.white, type: 'color' }, black: { value: cfg.color.base.black, type: 'color' } };
+    var out = {
+      color: color,
+      fontFamilies: tsGrp(cfg.fontFamily, 'fontFamilies'),
+      fontSizes: tsGrp(cfg.fontSize, 'fontSizes'),
+      fontWeights: tsGrp(cfg.fontWeight, 'fontWeights'),
+      lineHeights: tsGrp(cfg.lineHeight, 'lineHeights'),
+      letterSpacing: tsGrp(cfg.letterSpacing, 'letterSpacing'),
+      spacing: tsGrp(cfg.space, 'spacing'),
+      borderRadius: tsGrp(cfg.radius, 'borderRadius'),
+      borderWidth: tsGrp(cfg.borderWidth, 'borderWidth'),
+      opacity: tsGrp(cfg.opacity, 'opacity'),
+      boxShadow: tsGrp(cfg.shadow, 'boxShadow')
+    };
+    return JSON.stringify(out, null, 2);
+  }
+
   var TokenCore = { pyRound: pyRound, oklchToSrgb: oklchToSrgb, hexof: hexof,
     DEFAULT_CONFIG: DEFAULT_CONFIG, cloneConfig: cloneConfig,
-    buildRamp: buildRamp, buildAllRamps: buildAllRamps, toCSS: toCSS, toDTCG: toDTCG, toTailwind: toTailwind };
+    buildRamp: buildRamp, buildAllRamps: buildAllRamps, toCSS: toCSS, toDTCG: toDTCG, toTailwind: toTailwind, toFigma: toFigma };
   root.TokenCore = TokenCore;
   if (typeof module !== 'undefined' && module.exports) module.exports = TokenCore;
 })(typeof window !== 'undefined' ? window : globalThis);
