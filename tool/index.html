@@ -93,6 +93,15 @@
   @media (prefers-reduced-motion: reduce) {
     .pv-motion-box { transition-duration: 0ms !important; }
   }
+  .export-filename { min-width: 160px; font-weight: 600; font-size: 12px; }
+  .export-pre {
+    flex-basis: 100%; white-space: pre-wrap; word-break: break-all; max-height: 240px;
+    overflow: auto; background: #f7f7f7; border: 1px solid #ddd; border-radius: 4px;
+    padding: 8px; font-size: 11px; margin: 6px 0 0;
+  }
+  .export-all-row { padding: 8px 0; border-top: 1px solid #eee; margin-top: 4px; }
+  .import-row { flex-direction: column; align-items: flex-start; }
+  .import-note { margin: 4px 0 0; }
   button {
     font: inherit; cursor: pointer; border: 1px solid #999; background: #f0f0f0;
     border-radius: 4px; padding: 6px 12px;
@@ -143,6 +152,8 @@
     .contrast-table th, .contrast-table td { border-bottom-color: #333; }
     .contrast-table th { color: #aaa; }
     .contrast-warn { background: #7f1d1d; color: #fee2e2; }
+    .export-pre { background: #1a1a1a; border-color: #3a3a3a; color: #ddd; }
+    .export-all-row { border-top-color: #333; }
   }
 </style>
 </head>
@@ -946,6 +957,223 @@
     ]);
   }
 
+  // ---- Export panel (download / copy / preview) + tokens.json round-trip --
+  // The four artifacts are produced by calling the frozen exporters
+  // (C.toDTCG/toCSS/toTailwind/toFigma) unchanged, so downloaded files stay
+  // byte-identical to the golden parity output. This section only reads the
+  // store, except for the round-trip file loader, which is the sole writer
+  // (via store.loadConfig).
+  function download(filename, text, mime) {
+    var blob = new Blob([text], { type: mime || 'text/plain' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  var EXPORT_SPECS = [
+    { key: 'dtcg', label: 'tokens.json (DTCG)', filename: 'tokens.json', mime: 'application/json', fn: C.toDTCG },
+    { key: 'css', label: 'tokens.css', filename: 'tokens.css', mime: 'text/css', fn: C.toCSS },
+    { key: 'tailwind', label: 'tailwind.preset.js', filename: 'tailwind.preset.js', mime: 'text/javascript', fn: C.toTailwind },
+    { key: 'figma', label: 'tokens.figma.json', filename: 'tokens.figma.json', mime: 'application/json', fn: C.toFigma }
+  ];
+
+  function downloadAllExports(cfg) {
+    EXPORT_SPECS.forEach(function (spec) { download(spec.filename, spec.fn(cfg), spec.mime); });
+  }
+
+  function showTimedMessage(msgEl, text, ok) {
+    msgEl.textContent = text;
+    msgEl.style.color = ok ? '#166534' : '#b91c1c';
+    if (msgEl._msgTimer) clearTimeout(msgEl._msgTimer);
+    msgEl._msgTimer = setTimeout(function () { msgEl.textContent = ''; }, 3500);
+  }
+
+  // Copy = navigator.clipboard.writeText, with a fallback that selects the
+  // <pre> text (clipboard API may be unavailable under file://).
+  function copyExportText(text, pre, msgEl) {
+    function selectFallback() {
+      try {
+        var range = document.createRange();
+        range.selectNodeContents(pre);
+        var sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        var copied = false;
+        try { copied = !!(document.execCommand && document.execCommand('copy')); } catch (e) { copied = false; }
+        showTimedMessage(msgEl, copied ? '복사됨' : '텍스트를 선택했습니다. Cmd/Ctrl+C로 복사하세요.', copied);
+      } catch (e) {
+        showTimedMessage(msgEl, '복사에 실패했습니다.', false);
+      }
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () {
+        showTimedMessage(msgEl, '복사됨', true);
+      }, selectFallback);
+    } else {
+      selectFallback();
+    }
+  }
+
+  function renderExportArtifactRow(cfg, spec) {
+    var text = spec.fn(cfg);
+    var pre = el('pre', { class: 'export-pre' }, [text]);
+    var msg = el('span', { class: 'kv-msg', role: 'status', 'aria-live': 'polite' });
+    var copyBtn = el('button', {
+      type: 'button', text: '복사',
+      onclick: function () { copyExportText(text, pre, msg); }
+    });
+    var downloadBtn = el('button', {
+      type: 'button', text: '다운로드',
+      onclick: function () { download(spec.filename, text, spec.mime); }
+    });
+    var details = el('details', {}, [el('summary', { text: '미리보기' }), pre]);
+    return el('div', { class: 'kv-row' }, [
+      el('span', { class: 'export-filename', text: spec.label }),
+      copyBtn, downloadBtn, msg, details
+    ]);
+  }
+
+  // ---- Round-trip: tokens.json -> config -------------------------------
+  // Pure (no DOM). Restores ONLY the directly-stored groups plus
+  // color.base — color ramps are generated from H/Cpk params and are never
+  // reverse-engineered from hex. Never throws: JSON.parse errors and
+  // wrong-shape leaves are reported via the returned `error`/`skipped`
+  // fields instead.
+  function extractDTCGGroup(node) {
+    if (!node || typeof node !== 'object' || Array.isArray(node)) return null;
+    var keys = Object.keys(node);
+    if (!keys.length) return null;
+    var out = {};
+    for (var i = 0; i < keys.length; i++) {
+      var k = keys[i];
+      var leaf = node[k];
+      if (!leaf || typeof leaf !== 'object' || Array.isArray(leaf) ||
+          !Object.prototype.hasOwnProperty.call(leaf, '$value')) {
+        return null;
+      }
+      out[k] = leaf.$value;
+    }
+    return out;
+  }
+
+  var DTCG_DIRECT_GROUPS = ['space', 'radius', 'borderWidth', 'opacity', 'shadow',
+    'zIndex', 'breakpoint', 'duration', 'easing', 'lineHeight', 'letterSpacing'];
+  var DTCG_FONT_GROUPS = { family: 'fontFamily', size: 'fontSize', weight: 'fontWeight' };
+
+  function configFromDTCG(jsonText, currentCfg) {
+    var data;
+    try {
+      data = JSON.parse(jsonText);
+    } catch (e) {
+      return { config: null, error: 'JSON 파싱에 실패했습니다: ' + e.message, note: null, skipped: [] };
+    }
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+      return { config: null, error: '올바른 tokens.json 형식이 아닙니다 (최상위는 객체여야 합니다).', note: null, skipped: [] };
+    }
+
+    var merged = C.cloneConfig(currentCfg);
+    var restored = [];
+    var skipped = [];
+
+    DTCG_DIRECT_GROUPS.forEach(function (key) {
+      if (!(key in data)) return;
+      var g = extractDTCGGroup(data[key]);
+      if (g) { merged[key] = g; restored.push(key); } else { skipped.push(key); }
+    });
+
+    if (data.font && typeof data.font === 'object' && !Array.isArray(data.font)) {
+      Object.keys(DTCG_FONT_GROUPS).forEach(function (dtcgKey) {
+        if (!(dtcgKey in data.font)) return;
+        var g = extractDTCGGroup(data.font[dtcgKey]);
+        var cfgKey = DTCG_FONT_GROUPS[dtcgKey];
+        if (g) { merged[cfgKey] = g; restored.push(cfgKey); } else { skipped.push('font.' + dtcgKey); }
+      });
+    }
+
+    if (data.color && typeof data.color === 'object' && !Array.isArray(data.color) && ('base' in data.color)) {
+      var baseGroup = extractDTCGGroup(data.color.base);
+      if (baseGroup) { merged.color.base = baseGroup; restored.push('color.base'); } else { skipped.push('color.base'); }
+    }
+
+    if (!restored.length) {
+      return { config: null, error: 'tokens.json에서 복원 가능한 항목을 찾지 못했습니다. 형식을 확인해주세요.', note: null, skipped: skipped };
+    }
+
+    return {
+      config: merged,
+      error: null,
+      note: '컬러 램프는 파라미터에서 생성되므로 tokens.json에서 역복원하지 않습니다.',
+      skipped: skipped
+    };
+  }
+  window.Studio.configFromDTCG = configFromDTCG;
+
+  // Import status is kept outside render() (which fully rebuilds the DOM on
+  // every store change) so the success/error note survives the rebuild
+  // triggered by store.loadConfig.
+  var importStatus = null;
+
+  function renderExportSection(cfg) {
+    var rows = EXPORT_SPECS.map(function (spec) { return renderExportArtifactRow(cfg, spec); });
+    var allBtn = el('button', {
+      type: 'button', text: '전체 다운로드',
+      onclick: function () { downloadAllExports(store.get()); }
+    });
+    var allRow = el('div', { class: 'export-all-row' }, [allBtn]);
+
+    var fileInput = el('input', {
+      type: 'file', accept: '.json,application/json', id: 'ctl-import-file',
+      onchange: function (e) {
+        var input = e.target;
+        var file = input.files && input.files[0];
+        input.value = '';
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function () {
+          try {
+            var text = typeof reader.result === 'string' ? reader.result : '';
+            var result = configFromDTCG(text, store.get());
+            if (result.error) {
+              importStatus = { ok: false, text: result.error };
+              render();
+            } else {
+              var skippedNote = result.skipped.length ? (' (건너뜀: ' + result.skipped.join(', ') + ')') : '';
+              importStatus = { ok: true, text: '불러오기 완료. ' + result.note + skippedNote };
+              store.loadConfig(result.config); // triggers render() via subscribe
+            }
+          } catch (err) {
+            importStatus = { ok: false, text: '불러오는 중 오류가 발생했습니다: ' + (err && err.message ? err.message : String(err)) };
+            render();
+          }
+        };
+        reader.onerror = function () {
+          importStatus = { ok: false, text: '파일을 읽는 중 오류가 발생했습니다.' };
+          render();
+        };
+        reader.readAsText(file);
+      }
+    });
+    var fileLabel = el('label', { for: 'ctl-import-file', text: 'tokens.json 불러오기: ' });
+    var importRow = el('div', { class: 'kv-row import-row' }, [fileLabel, fileInput]);
+
+    var noteEl = el('p', {
+      class: 'pv-hint import-note',
+      text: '컬러 램프는 파라미터에서 생성되므로 tokens.json에서 역복원하지 않습니다. 나머지 항목(타이포/스페이스/라디우스 등)만 복원됩니다.'
+    });
+    var statusEl = el('div', { class: 'kv-msg', role: 'alert', 'aria-live': 'polite' });
+    if (importStatus) {
+      statusEl.textContent = importStatus.text;
+      statusEl.style.color = importStatus.ok ? '#166534' : '#b91c1c';
+    }
+
+    return el('details', { class: 'group' }, [
+      el('summary', { text: '내보내기(Export)' }),
+      el('div', { class: 'group-body kv-group-body' }, rows.concat([allRow, importRow, noteEl, statusEl]))
+    ]);
+  }
+
   function render() {
     var cfg = store.get();
 
@@ -965,7 +1193,7 @@
       title,
       renderColorPanel(cfg),
       renderTypePanel(cfg)
-    ].concat(renderListPanels()));
+    ].concat(renderListPanels()).concat([renderExportSection(cfg)]));
 
     var rightCol = el('div', { class: 'preview-col' }, [
       el('h2', { text: 'Preview' })
