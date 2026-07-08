@@ -1,0 +1,184 @@
+<!doctype html><meta charset="utf-8"><title>Design System Preset — Foundations</title>
+<style>
+body{font-family:Pretendard,system-ui,-apple-system,sans-serif;margin:0;background:#fafafa;color:#1a1a1a}
+.wrap{max-width:960px;margin:0 auto;padding:48px 24px}
+h1{font-size:32px;margin:0 0 4px}h2{font-size:20px;margin:44px 0 14px;padding-bottom:8px;border-bottom:1px solid #e5e5e5}
+.sub{color:#888;font-size:14px;margin-bottom:8px}
+.ramp{display:grid;grid-template-columns:repeat(11,1fr);gap:4px;margin-bottom:6px}
+.rname{font-size:12px;font-weight:700;text-transform:capitalize;margin:10px 0 4px}
+.sw{border-radius:6px;height:52px;display:flex;flex-direction:column;justify-content:flex-end;padding:5px;font-family:ui-monospace,Menlo,monospace;font-size:9px}
+.sw b{font-size:10px}.sw span{opacity:.8}
+.grid{display:flex;flex-wrap:wrap;gap:14px}
+.card{background:#fff;border:1px solid #eee;border-radius:10px;padding:14px 16px;font-size:13px}
+.mono{font-family:ui-monospace,Menlo,monospace;font-size:12px}
+table{border-collapse:collapse;width:100%;font-size:13px}td,th{border:1px solid #eaeaea;padding:6px 10px;text-align:left}
+.chip{display:inline-block;width:56px;height:56px;background:#6247B5;border-radius:8px}
+</style>
+<div class="wrap">
+<h1>Design System Preset · Foundations</h1>
+<div class="sub">Master preset (primitive layer) · DTCG-aligned · platform-agnostic</div>
+<h2>Color</h2>
+<div class="rname">gray</div><div class="ramp">
+<div class="sw" style="background:#F5F6F8;color:#111"><b>50</b><span>F5F6F8</span></div>
+<div class="sw" style="background:#E9EBEF;color:#111"><b>100</b><span>E9EBEF</span></div>
+<div class="sw" style="background:#D7D9DF;color:#111"><b>200</b><span>D7D9DF</span></div>
+<div class="sw" style="background:#BDC0C7;color:#111"><b>300</b><span>BDC0C7</span></div>
+<div class="sw" style="background:#A1A4AC;color:#fff"><b>400</b><span>A1A4AC</span></div>
+<div class="sw" style="background:#898B92;color:#fff"><b>500</b><span>898B92</span></div>
+<div class="sw" style="background:#72747B;color:#fff"><b>600</b><span>72747B</span></div>
+<div class="sw" style="background:#5D5F65;color:#fff"><b>700</b><span>5D5F65</span></div>
+<div class="sw" style="background:#494A4E;color:#fff"><b>800</b><span>494A4E</span></div>
+<div class="sw" style="background:#35373A;color:#fff"><b>900</b><span>35373A</span></div>
+<div class="sw" style="background:#242427;color:#fff"><b>950</b><span>242427</span></div>
+</div>
+<div class="rname">red</div><div class="ramp">
+<div class="sw" style="background:#FFE8E1;color:#111"><b>50</b><span>FFE8E1</span></div>
+<div class="sw" style="background:#FFD1C5;color:#111"><b>100</b><span>FFD1C5</span></div>
+<div class="sw" style="background:#FFAC9E;color:#111"><b>200</b><span>FFAC9E</span></div>
+<div class="sw" style="background:#FF8477;color:#fff"><b>300</b><span>FF8477</span></div>
+<div class="sw" style="background:#FF5D53;color:#fff"><b>400</b><span>FF5D53</span></div>
+<div class="sw" style="background:#F0443E;color:#fff"><b>500</b><span>F0443E</span></div>
+<div class="sw" style="background:#CC3430;color:#fff"><b>600</b><span>CC3430</span></div>
+<div class="sw" style="background:#AA2825;color:#fff"><b>700</b><span>AA2825</span></div>
+<div class="sw" style="background:#85201D;color:#fff"><b>800</b><span>85201D</span></div>
+<div class="sw" style="background:#621A16;color:#fff"><b>900</b><span>621A16</span></div>
+<div class="sw" style="background:#43100D;color:#fff"><b>950</b><span>43100D</span></div>
+</div>
+<div class="rname">orange</div><div class="ramp">
+<div class="sw" style="background:#FFEED6;color:#111"><b>50</b><span>FFEED6</span></div>
+<div class="sw" style="background:#FFDBAF;color:#111"><b>100</b><span>FFDBAF</span></div>
+<div class="sw" style="background:#FFBE77;color:#111"><b>200</b><span>FFBE77</span></div>
+<div class="sw" style="background:#FF9C39;color:#111"><b>300</b><span>FF9C39</span></div>
+<div class="sw" style="background:#FD7B00;color:#fff"><b>400</b><span>FD7B00</span></div>
+<div class="sw" style="background:#DD6300;color:#fff"><b>500</b><span>DD6300</span></div>
+<div class="sw" style="background:#BC5000;color:#fff"><b>600</b><span>BC5000</span></div>
+<div class="sw" style="background:#9C4000;color:#fff"><b>700</b><span>9C4000</span></div>
+<div class="sw" style="background:#7A3200;color:#fff"><b>800</b><span>7A3200</span></div>
+<div class="sw" style="background:#5A2600;color:#fff"><b>900</b><span>5A2600</span></div>
+<div class="sw" style="background:#3E1900;color:#fff"><b>950</b><span>3E1900</span></div>
+</div>
+<div class="rname">amber</div><div class="ramp">
+<div class="sw" style="background:#FFF3D1;color:#111"><b>50</b><span>FFF3D1</span></div>
+<div class="sw" style="background:#FFE6A5;color:#111"><b>100</b><span>FFE6A5</span></div>
+<div class="sw" style="background:#FFCF62;color:#111"><b>200</b><span>FFCF62</span></div>
+<div class="sw" style="background:#F7B300;color:#111"><b>300</b><span>F7B300</span></div>
+<div class="sw" style="background:#DE9400;color:#fff"><b>400</b><span>DE9400</span></div>
+<div class="sw" style="background:#C17C00;color:#fff"><b>500</b><span>C17C00</span></div>
+<div class="sw" style="background:#A36600;color:#fff"><b>600</b><span>A36600</span></div>
+<div class="sw" style="background:#875300;color:#fff"><b>700</b><span>875300</span></div>
+<div class="sw" style="background:#6A4100;color:#fff"><b>800</b><span>6A4100</span></div>
+<div class="sw" style="background:#4D3000;color:#fff"><b>900</b><span>4D3000</span></div>
+<div class="sw" style="background:#352000;color:#fff"><b>950</b><span>352000</span></div>
+</div>
+<div class="rname">green</div><div class="ramp">
+<div class="sw" style="background:#E1FFE6;color:#111"><b>50</b><span>E1FFE6</span></div>
+<div class="sw" style="background:#C4FBCE;color:#111"><b>100</b><span>C4FBCE</span></div>
+<div class="sw" style="background:#99F1AC;color:#111"><b>200</b><span>99F1AC</span></div>
+<div class="sw" style="background:#6BDC88;color:#111"><b>300</b><span>6BDC88</span></div>
+<div class="sw" style="background:#3DC267;color:#fff"><b>400</b><span>3DC267</span></div>
+<div class="sw" style="background:#21A651;color:#fff"><b>500</b><span>21A651</span></div>
+<div class="sw" style="background:#0E8C41;color:#fff"><b>600</b><span>0E8C41</span></div>
+<div class="sw" style="background:#067334;color:#fff"><b>700</b><span>067334</span></div>
+<div class="sw" style="background:#095A28;color:#fff"><b>800</b><span>095A28</span></div>
+<div class="sw" style="background:#0C421E;color:#fff"><b>900</b><span>0C421E</span></div>
+<div class="sw" style="background:#072D13;color:#fff"><b>950</b><span>072D13</span></div>
+</div>
+<div class="rname">teal</div><div class="ramp">
+<div class="sw" style="background:#DCFEF9;color:#111"><b>50</b><span>DCFEF9</span></div>
+<div class="sw" style="background:#B9FAF1;color:#111"><b>100</b><span>B9FAF1</span></div>
+<div class="sw" style="background:#84EFE2;color:#111"><b>200</b><span>84EFE2</span></div>
+<div class="sw" style="background:#44DACB;color:#111"><b>300</b><span>44DACB</span></div>
+<div class="sw" style="background:#00C0B0;color:#fff"><b>400</b><span>00C0B0</span></div>
+<div class="sw" style="background:#00A496;color:#fff"><b>500</b><span>00A496</span></div>
+<div class="sw" style="background:#008A7E;color:#fff"><b>600</b><span>008A7E</span></div>
+<div class="sw" style="background:#007267;color:#fff"><b>700</b><span>007267</span></div>
+<div class="sw" style="background:#005950;color:#fff"><b>800</b><span>005950</span></div>
+<div class="sw" style="background:#00413B;color:#fff"><b>900</b><span>00413B</span></div>
+<div class="sw" style="background:#002C28;color:#fff"><b>950</b><span>002C28</span></div>
+</div>
+<div class="rname">blue</div><div class="ramp">
+<div class="sw" style="background:#DEF8FF;color:#111"><b>50</b><span>DEF8FF</span></div>
+<div class="sw" style="background:#BFEFFF;color:#111"><b>100</b><span>BFEFFF</span></div>
+<div class="sw" style="background:#91DDFF;color:#111"><b>200</b><span>91DDFF</span></div>
+<div class="sw" style="background:#63C2FF;color:#111"><b>300</b><span>63C2FF</span></div>
+<div class="sw" style="background:#36A4FF;color:#fff"><b>400</b><span>36A4FF</span></div>
+<div class="sw" style="background:#1B8AFF;color:#fff"><b>500</b><span>1B8AFF</span></div>
+<div class="sw" style="background:#0A72DA;color:#fff"><b>600</b><span>0A72DA</span></div>
+<div class="sw" style="background:#035EB6;color:#fff"><b>700</b><span>035EB6</span></div>
+<div class="sw" style="background:#07498E;color:#fff"><b>800</b><span>07498E</span></div>
+<div class="sw" style="background:#0A3668;color:#fff"><b>900</b><span>0A3668</span></div>
+<div class="sw" style="background:#062448;color:#fff"><b>950</b><span>062448</span></div>
+</div>
+<div class="rname">violet</div><div class="ramp">
+<div class="sw" style="background:#F4F0FF;color:#111"><b>50</b><span>F4F0FF</span></div>
+<div class="sw" style="background:#EAE0FF;color:#111"><b>100</b><span>EAE0FF</span></div>
+<div class="sw" style="background:#D8C5FF;color:#111"><b>200</b><span>D8C5FF</span></div>
+<div class="sw" style="background:#C1A5FF;color:#111"><b>300</b><span>C1A5FF</span></div>
+<div class="sw" style="background:#A784FF;color:#fff"><b>400</b><span>A784FF</span></div>
+<div class="sw" style="background:#8E6CFF;color:#fff"><b>500</b><span>8E6CFF</span></div>
+<div class="sw" style="background:#7758DA;color:#fff"><b>600</b><span>7758DA</span></div>
+<div class="sw" style="background:#6247B5;color:#fff"><b>700</b><span>6247B5</span></div>
+<div class="sw" style="background:#4C378E;color:#fff"><b>800</b><span>4C378E</span></div>
+<div class="sw" style="background:#382968;color:#fff"><b>900</b><span>382968</span></div>
+<div class="sw" style="background:#251B48;color:#fff"><b>950</b><span>251B48</span></div>
+</div>
+<div class="rname">pink</div><div class="ramp">
+<div class="sw" style="background:#FFE7FB;color:#111"><b>50</b><span>FFE7FB</span></div>
+<div class="sw" style="background:#FFD0F5;color:#111"><b>100</b><span>FFD0F5</span></div>
+<div class="sw" style="background:#FFACE8;color:#111"><b>200</b><span>FFACE8</span></div>
+<div class="sw" style="background:#FF85D2;color:#fff"><b>300</b><span>FF85D2</span></div>
+<div class="sw" style="background:#FF5FB7;color:#fff"><b>400</b><span>FF5FB7</span></div>
+<div class="sw" style="background:#DF489D;color:#fff"><b>500</b><span>DF489D</span></div>
+<div class="sw" style="background:#BE3883;color:#fff"><b>600</b><span>BE3883</span></div>
+<div class="sw" style="background:#9E2B6C;color:#fff"><b>700</b><span>9E2B6C</span></div>
+<div class="sw" style="background:#7B2254;color:#fff"><b>800</b><span>7B2254</span></div>
+<div class="sw" style="background:#5B1B3E;color:#fff"><b>900</b><span>5B1B3E</span></div>
+<div class="sw" style="background:#3E112A;color:#fff"><b>950</b><span>3E112A</span></div>
+</div>
+<h2>Typography · size</h2><div class="grid">
+<div class="card"><div style="font-size:11px;font-weight:600">Ag 가나다 2xs</div><div class="mono">font-size-2xs · 11px</div></div>
+<div class="card"><div style="font-size:12px;font-weight:600">Ag 가나다 xs</div><div class="mono">font-size-xs · 12px</div></div>
+<div class="card"><div style="font-size:14px;font-weight:600">Ag 가나다 sm</div><div class="mono">font-size-sm · 14px</div></div>
+<div class="card"><div style="font-size:16px;font-weight:600">Ag 가나다 md</div><div class="mono">font-size-md · 16px</div></div>
+<div class="card"><div style="font-size:18px;font-weight:600">Ag 가나다 lg</div><div class="mono">font-size-lg · 18px</div></div>
+<div class="card"><div style="font-size:20px;font-weight:600">Ag 가나다 xl</div><div class="mono">font-size-xl · 20px</div></div>
+<div class="card"><div style="font-size:24px;font-weight:600">Ag 가나다 2xl</div><div class="mono">font-size-2xl · 24px</div></div>
+<div class="card"><div style="font-size:30px;font-weight:600">Ag 가나다 3xl</div><div class="mono">font-size-3xl · 30px</div></div>
+<div class="card"><div style="font-size:36px;font-weight:600">Ag 가나다 4xl</div><div class="mono">font-size-4xl · 36px</div></div>
+<div class="card"><div style="font-size:48px;font-weight:600">Ag 가나다 5xl</div><div class="mono">font-size-5xl · 48px</div></div>
+<div class="card"><div style="font-size:60px;font-weight:600">Ag 가나다 6xl</div><div class="mono">font-size-6xl · 60px</div></div>
+</div>
+<h2>Spacing</h2><table><tr><th>token</th><th>value</th><th></th></tr>
+<tr><td class="mono">space-0</td><td class="mono">0px</td><td><div style="height:12px;width:1px;background:#6247B5;border-radius:2px"></div></td></tr>
+<tr><td class="mono">space-1</td><td class="mono">4px</td><td><div style="height:12px;width:4px;background:#6247B5;border-radius:2px"></div></td></tr>
+<tr><td class="mono">space-2</td><td class="mono">8px</td><td><div style="height:12px;width:8px;background:#6247B5;border-radius:2px"></div></td></tr>
+<tr><td class="mono">space-3</td><td class="mono">12px</td><td><div style="height:12px;width:12px;background:#6247B5;border-radius:2px"></div></td></tr>
+<tr><td class="mono">space-4</td><td class="mono">16px</td><td><div style="height:12px;width:16px;background:#6247B5;border-radius:2px"></div></td></tr>
+<tr><td class="mono">space-5</td><td class="mono">20px</td><td><div style="height:12px;width:20px;background:#6247B5;border-radius:2px"></div></td></tr>
+<tr><td class="mono">space-6</td><td class="mono">24px</td><td><div style="height:12px;width:24px;background:#6247B5;border-radius:2px"></div></td></tr>
+<tr><td class="mono">space-8</td><td class="mono">32px</td><td><div style="height:12px;width:32px;background:#6247B5;border-radius:2px"></div></td></tr>
+<tr><td class="mono">space-10</td><td class="mono">40px</td><td><div style="height:12px;width:40px;background:#6247B5;border-radius:2px"></div></td></tr>
+<tr><td class="mono">space-12</td><td class="mono">48px</td><td><div style="height:12px;width:48px;background:#6247B5;border-radius:2px"></div></td></tr>
+<tr><td class="mono">space-16</td><td class="mono">64px</td><td><div style="height:12px;width:64px;background:#6247B5;border-radius:2px"></div></td></tr>
+<tr><td class="mono">space-20</td><td class="mono">80px</td><td><div style="height:12px;width:80px;background:#6247B5;border-radius:2px"></div></td></tr>
+<tr><td class="mono">space-24</td><td class="mono">96px</td><td><div style="height:12px;width:96px;background:#6247B5;border-radius:2px"></div></td></tr>
+</table>
+<h2>Radius</h2><div class="grid">
+<div class="card" style="text-align:center"><div class="chip" style="border-radius:0px"></div><div class="mono">none · 0px</div></div>
+<div class="card" style="text-align:center"><div class="chip" style="border-radius:2px"></div><div class="mono">xs · 2px</div></div>
+<div class="card" style="text-align:center"><div class="chip" style="border-radius:4px"></div><div class="mono">sm · 4px</div></div>
+<div class="card" style="text-align:center"><div class="chip" style="border-radius:6px"></div><div class="mono">md · 6px</div></div>
+<div class="card" style="text-align:center"><div class="chip" style="border-radius:8px"></div><div class="mono">lg · 8px</div></div>
+<div class="card" style="text-align:center"><div class="chip" style="border-radius:12px"></div><div class="mono">xl · 12px</div></div>
+<div class="card" style="text-align:center"><div class="chip" style="border-radius:16px"></div><div class="mono">2xl · 16px</div></div>
+<div class="card" style="text-align:center"><div class="chip" style="border-radius:24px"></div><div class="mono">3xl · 24px</div></div>
+<div class="card" style="text-align:center"><div class="chip" style="border-radius:9999px"></div><div class="mono">full · 9999px</div></div>
+</div>
+<h2>Elevation</h2><div class="grid">
+<div style="text-align:center"><div style="width:88px;height:60px;background:#fff;border-radius:10px;box-shadow:0 1px 2px rgba(0,0,0,0.08)"></div><div class="mono" style="margin-top:8px">sm</div></div>
+<div style="text-align:center"><div style="width:88px;height:60px;background:#fff;border-radius:10px;box-shadow:0 2px 6px rgba(0,0,0,0.10)"></div><div class="mono" style="margin-top:8px">md</div></div>
+<div style="text-align:center"><div style="width:88px;height:60px;background:#fff;border-radius:10px;box-shadow:0 6px 16px rgba(0,0,0,0.12)"></div><div class="mono" style="margin-top:8px">lg</div></div>
+<div style="text-align:center"><div style="width:88px;height:60px;background:#fff;border-radius:10px;box-shadow:0 12px 28px rgba(0,0,0,0.16)"></div><div class="mono" style="margin-top:8px">xl</div></div>
+<div style="text-align:center"><div style="width:88px;height:60px;background:#fff;border-radius:10px;box-shadow:0 24px 48px rgba(0,0,0,0.20)"></div><div class="mono" style="margin-top:8px">2xl</div></div>
+</div>
+</div>
