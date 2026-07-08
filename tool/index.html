@@ -223,9 +223,36 @@
     return JSON.stringify(out, null, 2);
   }
 
+  function relLuminance(hex) {
+    var ch = [1, 3, 5].map(function (i) { return parseInt(hex.slice(i, i + 2), 16) / 255; });
+    var f = function (c) { return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+    return 0.2126 * f(ch[0]) + 0.7152 * f(ch[1]) + 0.0722 * f(ch[2]);
+  }
+
+  function contrastRatio(a, b) {
+    var la = relLuminance(a), lb = relLuminance(b);
+    var hi = Math.max(la, lb), lo = Math.min(la, lb);
+    return (hi + 0.05) / (lo + 0.05);
+  }
+
+  function contrastReport(cfg) {
+    var ramps = buildAllRamps(cfg);
+    var hues = ['gray'].concat(cfg.color.order.filter(function (n) { return n !== 'gray'; }));
+    return hues.map(function (name) {
+      var ramp = ramps[name];
+      var steps = Object.keys(ramp);
+      var onWhite = steps.filter(function (s) { return contrastRatio(ramp[s], '#FFFFFF') >= 4.5; });
+      var onBlack = steps.filter(function (s) { return contrastRatio(ramp[s], '#000000') >= 4.5; });
+      var minS = onWhite.length ? String(Math.min.apply(null, onWhite.map(Number))) : '—';
+      var maxS = onBlack.length ? String(Math.max.apply(null, onBlack.map(Number))) : '—';
+      return { hue: name, whiteMinStep: minS, blackMaxStep: maxS };
+    });
+  }
+
   var TokenCore = { pyRound: pyRound, oklchToSrgb: oklchToSrgb, hexof: hexof,
     DEFAULT_CONFIG: DEFAULT_CONFIG, cloneConfig: cloneConfig,
-    buildRamp: buildRamp, buildAllRamps: buildAllRamps, toCSS: toCSS, toDTCG: toDTCG, toTailwind: toTailwind, toFigma: toFigma };
+    buildRamp: buildRamp, buildAllRamps: buildAllRamps, toCSS: toCSS, toDTCG: toDTCG, toTailwind: toTailwind, toFigma: toFigma,
+    relLuminance: relLuminance, contrastRatio: contrastRatio, contrastReport: contrastReport };
   root.TokenCore = TokenCore;
   if (typeof module !== 'undefined' && module.exports) module.exports = TokenCore;
 })(typeof window !== 'undefined' ? window : globalThis);

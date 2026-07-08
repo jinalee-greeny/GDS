@@ -37,3 +37,17 @@ test('cloneConfig returns an independent deep copy', () => {
   c.color.palettes.blue.H = 200;
   assert.equal(core.DEFAULT_CONFIG.color.palettes.blue.H, 255);
 });
+
+test('contrastReport reproduces GUIDE.md AA results', () => {
+  const rep = core.contrastReport(core.DEFAULT_CONFIG);
+  const by = Object.fromEntries(rep.map(r => [r.hue, r]));
+  // From docs/GUIDE.md: most hues white=600/black=500; green & teal white=700/black=600
+  for (const h of ['gray','red','orange','amber','blue','violet','pink']) {
+    assert.equal(by[h].whiteMinStep, '600', h + ' whiteMinStep');
+    assert.equal(by[h].blackMaxStep, '500', h + ' blackMaxStep');
+  }
+  for (const h of ['green','teal']) {
+    assert.equal(by[h].whiteMinStep, '700', h + ' whiteMinStep');
+    assert.equal(by[h].blackMaxStep, '600', h + ' blackMaxStep');
+  }
+});
