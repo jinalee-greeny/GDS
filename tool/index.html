@@ -995,16 +995,25 @@
   function copyExportText(text, pre, msgEl) {
     function selectFallback() {
       try {
+        // The <pre> may live inside a COLLAPSED <details> (display:none), in
+        // which case Range/execCommand operate on unrendered content and copy
+        // nothing (yet execCommand can still return true — a false success).
+        // Open the disclosure first so the text is actually rendered (and
+        // visible to the user) before selecting.
+        var d = pre.closest && pre.closest('details');
+        if (d) d.open = true;
         var range = document.createRange();
         range.selectNodeContents(pre);
         var sel = window.getSelection();
         sel.removeAllRanges();
         sel.addRange(range);
         var copied = false;
-        try { copied = !!(document.execCommand && document.execCommand('copy')); } catch (e) { copied = false; }
+        // Only treat an explicit `true` as success; a false/unknown result
+        // means the browser did not copy — never report a false "복사됨".
+        try { copied = document.execCommand && document.execCommand('copy') === true; } catch (e) { copied = false; }
         showTimedMessage(msgEl, copied ? '복사됨' : '텍스트를 선택했습니다. Cmd/Ctrl+C로 복사하세요.', copied);
       } catch (e) {
-        showTimedMessage(msgEl, '복사에 실패했습니다.', false);
+        showTimedMessage(msgEl, '복사에 실패했습니다. 미리보기를 열고 직접 선택 후 Cmd/Ctrl+C로 복사하세요.', false);
       }
     }
     if (navigator.clipboard && navigator.clipboard.writeText) {
