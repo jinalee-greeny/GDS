@@ -105,9 +105,43 @@
     return out;
   }
 
+  var DTCG_DESC = 'Master Design System Preset — Foundations (primitive layer). Platform-agnostic, DTCG-aligned.';
+  function grp(obj, ttype) {
+    var out = {};
+    Object.keys(obj).forEach(function (k) { out[k] = { $type: ttype, $value: obj[k] }; });
+    return out;
+  }
+  function toDTCG(cfg) {
+    var ramps = buildAllRamps(cfg);
+    var color = {};
+    cfg.color.order.forEach(function (name) {
+      var g = {};
+      Object.keys(ramps[name]).forEach(function (s) { g[s] = { $type: 'color', $value: ramps[name][s] }; });
+      color[name] = g;
+    });
+    color.base = grp(cfg.color.base, 'color');
+    var dtcg = {
+      $description: DTCG_DESC,
+      color: color,
+      font: { family: grp(cfg.fontFamily, 'fontFamily'), size: grp(cfg.fontSize, 'dimension'), weight: grp(cfg.fontWeight, 'fontWeight') },
+      lineHeight: grp(cfg.lineHeight, 'number'),
+      letterSpacing: grp(cfg.letterSpacing, 'dimension'),
+      space: grp(cfg.space, 'dimension'),
+      radius: grp(cfg.radius, 'dimension'),
+      borderWidth: grp(cfg.borderWidth, 'dimension'),
+      opacity: grp(cfg.opacity, 'number'),
+      shadow: grp(cfg.shadow, 'shadow'),
+      zIndex: grp(cfg.zIndex, 'number'),
+      breakpoint: grp(cfg.breakpoint, 'dimension'),
+      duration: grp(cfg.duration, 'duration'),
+      easing: grp(cfg.easing, 'cubicBezier')
+    };
+    return JSON.stringify(dtcg, null, 2);
+  }
+
   var TokenCore = { pyRound: pyRound, oklchToSrgb: oklchToSrgb, hexof: hexof,
     DEFAULT_CONFIG: DEFAULT_CONFIG, cloneConfig: cloneConfig,
-    buildRamp: buildRamp, buildAllRamps: buildAllRamps };
+    buildRamp: buildRamp, buildAllRamps: buildAllRamps, toDTCG: toDTCG };
   root.TokenCore = TokenCore;
   if (typeof module !== 'undefined' && module.exports) module.exports = TokenCore;
 })(typeof window !== 'undefined' ? window : globalThis);
