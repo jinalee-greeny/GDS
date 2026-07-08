@@ -15,3 +15,7 @@ test('toDTCG matches committed tokens/tokens.json exactly', () => {
 test('toCSS matches committed build/tokens.css exactly', () => {
   assert.equal(core.toCSS(core.DEFAULT_CONFIG), read('build/tokens.css'));
 });
+
+test('toTailwind matches committed build/tailwind.preset.js exactly', () => {
+  assert.equal(core.toTailwind(core.DEFAULT_CONFIG), read('build/tailwind.preset.js'));
+});
