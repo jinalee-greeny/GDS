@@ -20,3 +20,20 @@ test('hexof matches Python OKLCH output for known blue steps', () => {
   assert.equal(core.hexof(0.972, 0.180 * 0.30, 255), '#DEF8FF');
   assert.equal(core.hexof(0.262, 0.180 * 0.42, 255), '#062448'); // step 950
 });
+
+test('buildAllRamps reproduces committed gray, red, blue ramps', () => {
+  const ramps = core.buildAllRamps(core.DEFAULT_CONFIG);
+  const grayExpected = {'50':'#F5F6F8','100':'#E9EBEF','200':'#D7D9DF','300':'#BDC0C7','400':'#A1A4AC','500':'#898B92','600':'#72747B','700':'#5D5F65','800':'#494A4E','900':'#35373A','950':'#242427'};
+  const redExpected = {'50':'#FFE8E1','100':'#FFD1C5','200':'#FFAC9E','300':'#FF8477','400':'#FF5D53','500':'#F0443E','600':'#CC3430','700':'#AA2825','800':'#85201D','900':'#621A16','950':'#43100D'};
+  const blueExpected = {'50':'#DEF8FF','100':'#BFEFFF','200':'#91DDFF','300':'#63C2FF','400':'#36A4FF','500':'#1B8AFF','600':'#0A72DA','700':'#035EB6','800':'#07498E','900':'#0A3668','950':'#062448'};
+  assert.equal(JSON.stringify(ramps.gray), JSON.stringify(grayExpected));
+  assert.equal(JSON.stringify(ramps.red), JSON.stringify(redExpected));
+  assert.equal(JSON.stringify(ramps.blue), JSON.stringify(blueExpected));
+  assert.equal(core.DEFAULT_CONFIG.color.order.length, 9);
+});
+
+test('cloneConfig returns an independent deep copy', () => {
+  const c = core.cloneConfig(core.DEFAULT_CONFIG);
+  c.color.palettes.blue.H = 200;
+  assert.equal(core.DEFAULT_CONFIG.color.palettes.blue.H, 255);
+});
