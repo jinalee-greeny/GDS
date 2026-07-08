@@ -111,6 +111,13 @@
   }
   .badge-pass { background: #dcfce7; color: #14532d; }
   .badge-fail { background: #fee2e2; color: #7f1d1d; }
+  .contrast-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .contrast-table th, .contrast-table td { text-align: left; padding: 4px 6px; border-bottom: 1px solid #eee; }
+  .contrast-table th { font-weight: 600; color: #444; }
+  .contrast-hue-cell { text-transform: capitalize; font-weight: 600; }
+  .contrast-warn-row td { padding: 6px; }
+  .contrast-warn { display: flex; align-items: flex-start; gap: 6px; padding: 6px 8px; border-radius: 4px;
+    background: #fee2e2; color: #7f1d1d; font-size: 11px; }
   @media (prefers-color-scheme: dark) {
     html, body { color: #eee; background: #1a1a1a; }
     .panel-col { border-right-color: #333; }
@@ -131,6 +138,11 @@
       background-image: linear-gradient(45deg, #444 25%, transparent 25%), linear-gradient(-45deg, #444 25%, transparent 25%),
         linear-gradient(45deg, transparent 75%, #444 75%), linear-gradient(-45deg, transparent 75%, #444 75%);
     }
+    .badge-pass { background: #14532d; color: #dcfce7; }
+    .badge-fail { background: #7f1d1d; color: #fee2e2; }
+    .contrast-table th, .contrast-table td { border-bottom-color: #333; }
+    .contrast-table th { color: #aaa; }
+    .contrast-warn { background: #7f1d1d; color: #fee2e2; }
   }
 </style>
 </head>
@@ -880,6 +892,60 @@
     ];
   }
 
+  // ---- Live WCAG AA contrast validation panel (read-only) ----------------
+  // Renders C.contrastReport(store.get()) as-is; no contrast math lives here.
+  // Status is always conveyed as text + icon (never color alone), per the
+  // color-blind-safe requirement — this tool must not fail its own audit.
+  function contrastStepBadge(stepStr) {
+    var passed = stepStr !== '—'; // en-dash sentinel from contrastReport
+    return el('span', { class: passed ? 'badge-pass' : 'badge-fail' },
+      [passed ? ('✓ 통과 (' + stepStr + ')') : '✕ 없음']);
+  }
+
+  function contrastWarnRow(message) {
+    return el('tr', { class: 'contrast-warn-row' }, [
+      el('td', { colspan: '3' }, [
+        el('div', { class: 'contrast-warn', role: 'alert' }, ['⚠ ' + message])
+      ])
+    ]);
+  }
+
+  function renderContrastPanel(cfg) {
+    var report = C.contrastReport(cfg);
+    var headerRow = el('tr', {}, [
+      el('th', { text: '팔레트' }),
+      el('th', { text: '흰 배경에 AA 통과 최소 step' }),
+      el('th', { text: '검은 배경에 AA 통과 최대 step' })
+    ]);
+    var bodyRows = [];
+    report.forEach(function (r) {
+      bodyRows.push(el('tr', {}, [
+        el('td', { class: 'contrast-hue-cell', text: r.hue }),
+        el('td', {}, [contrastStepBadge(r.whiteMinStep)]),
+        el('td', {}, [contrastStepBadge(r.blackMaxStep)])
+      ]));
+      if (r.whiteMinStep === '—') {
+        bodyRows.push(contrastWarnRow(
+          r.hue + ': 이 hue는 흰 배경 본문 대비를 통과하는 단계가 없습니다 — 채도/명도를 낮춰보세요.'
+        ));
+      }
+      if (r.blackMaxStep === '—') {
+        bodyRows.push(contrastWarnRow(
+          r.hue + ': 이 hue는 검은 배경 본문 대비를 통과하는 단계가 없습니다 — 채도/명도를 조정해보세요.'
+        ));
+      }
+    });
+    var table = el('table', { class: 'contrast-table' }, [
+      el('thead', {}, [headerRow]),
+      el('tbody', {}, bodyRows)
+    ]);
+    return el('div', { class: 'pv-block' }, [
+      el('h3', { text: '접근성 검증 (WCAG AA 4.5:1)' }),
+      el('p', { class: 'pv-hint', text: '각 hue에서 흰 배경 대비 본문 텍스트로 안전한 최소 단계, 검은 배경(다크) 대비 최소 단계.' }),
+      table
+    ]);
+  }
+
   function render() {
     var cfg = store.get();
 
@@ -903,7 +969,7 @@
 
     var rightCol = el('div', { class: 'preview-col' }, [
       el('h2', { text: 'Preview' })
-    ].concat(renderPreview(cfg)));
+    ].concat(renderPreview(cfg), [renderContrastPanel(cfg)]));
 
     app.appendChild(leftCol);
     app.appendChild(rightCol);
