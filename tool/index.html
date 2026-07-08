@@ -36,11 +36,9 @@
   }
   details > summary {
     cursor: pointer; padding: 10px 12px; font-weight: 600; list-style: revert;
-    display: flex; align-items: center; justify-content: space-between; gap: 8px;
   }
   details > summary:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
-  .group-summary-text { flex: 1 1 auto; }
-  .group-reset-btn { flex: 0 0 auto; font-size: 11px; padding: 3px 8px; }
+  .group-reset-btn { display: inline-block; font-size: 11px; padding: 3px 8px; margin: 0 0 8px; }
   .group-body { padding: 4px 12px 12px; }
   .field-hint, .panel-hint { font-size: 11px; color: #666; margin: 0 0 6px; }
   .field-row .field-hint { margin: 0; flex-basis: 100%; }
@@ -498,6 +496,14 @@
   // for the focus-preservation-by-activeElement path to latch onto. Consumed
   // (read once, then cleared) inside restoreUIState().
   var pendingFocusId = null;
+  // Modular-scale Base/Ratio are ephemeral helper inputs — they are NOT part
+  // of the config (only the "Apply modular scale" button writes their effect
+  // into cfg.fontSize). Because render() rebuilds their DOM on every store
+  // change, rendering them from string literals would silently revert a
+  // typed-but-not-yet-applied value on any unrelated re-render. Backing them
+  // with this module-scoped state (updated on their oninput) makes the typed
+  // VALUE persist across rebuilds, the same way ids make focus persist.
+  var modScaleState = { base: '16', ratio: '1.25' };
   function isDetailsOpen(id, defaultOpen) {
     return Object.prototype.hasOwnProperty.call(detailsOpenState, id) ? detailsOpenState[id] : defaultOpen;
   }
@@ -511,30 +517,24 @@
     return attrs;
   }
 
-  // A group header = <summary> containing a text span + an optional "초기화"
-  // (reset) button. The button must live INSIDE <summary> (not as a sibling)
-  // because everything that is not the <summary> element is hidden while a
-  // <details> is collapsed — a reset control that should stay usable even
-  // when the group is collapsed has nowhere else to go. Nesting a <button>
-  // inside <summary> is unusual but functionally sound as long as the
-  // button's own click is stopped from also toggling the disclosure: both
-  // preventDefault() and stopPropagation() are called so neither a mouse
-  // click nor a keyboard Enter/Space activation on the button reaches the
-  // <summary>'s native toggle behavior.
-  function groupHeader(labelText, groupKey) {
-    var text = el('span', { class: 'group-summary-text', text: labelText });
-    if (!groupKey) return el('summary', {}, [text]);
-    var resetBtn = el('button', {
+  // The per-group "초기화" (reset) button is rendered as the FIRST child of the
+  // group BODY (inside <details>, after </summary>) — NOT inside <summary>.
+  // A <button> nested in <summary> competes with the disclosure toggle and
+  // has uncertain keyboard/AT behavior, so it lives in the body instead. It's
+  // visible whenever the group is expanded, which is exactly when the user is
+  // editing/resetting that group, and its Enter/Space activation only fires
+  // the reset (never toggles the disclosure) because it no longer sits on the
+  // summary's event path.
+  function groupResetBtn(labelText, groupKey) {
+    return el('button', {
       type: 'button', class: 'group-reset-btn', text: '초기화',
-      'aria-label': labelText + ' 그룹을 기본값으로 초기화',
-      onclick: function (e) {
-        e.preventDefault(); e.stopPropagation();
+      'aria-label': labelText + ' 그룹 기본값으로 초기화',
+      onclick: function () {
         if (window.confirm(labelText + ' 그룹을 기본값으로 되돌릴까요? (실행 취소로 복구 가능)')) {
           store.resetGroup(groupKey);
         }
       }
     });
-    return el('summary', {}, [text, resetBtn]);
   }
 
   function el(tag, attrs, children) {
@@ -652,8 +652,9 @@
       return curveCell('ctl-curve-Cm-' + i, 'Cm[' + C.DEFAULT_CONFIG.steps[i] + ']', ['curves', 'Cm', i], v, 0, 2, 0.01);
     });
     return el('details', detailsAttrs('grp-curves', false), [
-      groupHeader('Advanced curve (shared Lc / Cm)', 'curves'),
+      el('summary', { text: 'Advanced curve (shared Lc / Cm)' }),
       el('div', { class: 'group-body' }, [
+        groupResetBtn('Advanced curve (shared Lc / Cm)', 'curves'),
         el('p', { class: 'panel-hint', text: '권장 범위 — Lc(밝기): 0–1, Cm(채도 배율): 0–2. 11스텝(50–950) 공통 커브.' }),
         el('h2', { text: 'Lc (lightness per step)' }),
         el('div', { class: 'curve-grid' }, lcCells),
@@ -667,8 +668,8 @@
     var ramps = C.buildAllRamps(cfg);
     var rows = cfg.color.order.map(function (hue) { return renderHueRow(cfg, ramps, hue); });
     return el('details', detailsAttrs('grp-color', true, 'group'), [
-      groupHeader('Color', 'color'),
-      el('div', { class: 'group-body' }, rows.concat([renderCurveEditor(cfg)]))
+      el('summary', { text: 'Color' }),
+      el('div', { class: 'group-body' }, [groupResetBtn('Color', 'color')].concat(rows).concat([renderCurveEditor(cfg)]))
     ]);
   }
 
@@ -694,18 +695,26 @@
 
     var baseId = 'ctl-modscale-base', ratioId = 'ctl-modscale-ratio';
     var baseInput = el('input', {
-      type: 'number', id: baseId, value: '16', min: '0', step: '1',
-      onchange: function (e) { e.target.value = String(clamp(Number(e.target.value), 0, 999)); }
+      type: 'number', id: baseId, value: modScaleState.base, min: '0', step: '1',
+      oninput: function (e) { modScaleState.base = e.target.value; },
+      onchange: function (e) {
+        var v = String(clamp(Number(e.target.value), 0, 999));
+        e.target.value = v; modScaleState.base = v;
+      }
     });
     var ratioInput = el('input', {
-      type: 'number', id: ratioId, value: '1.25', min: '0.1', step: '0.01',
-      onchange: function (e) { e.target.value = String(clamp(Number(e.target.value), 0.1, 10)); }
+      type: 'number', id: ratioId, value: modScaleState.ratio, min: '0.1', step: '0.01',
+      oninput: function (e) { modScaleState.ratio = e.target.value; },
+      onchange: function (e) {
+        var v = String(clamp(Number(e.target.value), 0.1, 10));
+        e.target.value = v; modScaleState.ratio = v;
+      }
     });
     var applyBtn = el('button', {
       type: 'button', text: 'Apply modular scale',
       onclick: function () {
-        var base = Number(baseInput.value);
-        var ratio = Number(ratioInput.value);
+        var base = clamp(Number(modScaleState.base), 0, 999);
+        var ratio = clamp(Number(modScaleState.ratio), 0.1, 10);
         var mdIndex = FONT_SIZE_ORDER.indexOf('md');
         var next = {};
         FONT_SIZE_ORDER.forEach(function (key, i) {
@@ -723,8 +732,9 @@
     ]);
 
     return el('details', detailsAttrs('grp-fontSize', true, 'group'), [
-      groupHeader('Type Scale', 'fontSize'),
+      el('summary', { text: 'Type Scale' }),
       el('div', { class: 'group-body' }, [
+        groupResetBtn('Type Scale', 'fontSize'),
         el('p', { class: 'panel-hint', text: 'px 단위, 0 이상의 정수 권장. 각 스텝은 개별 수동값 — "Apply modular scale"로 base×ratio 커브를 일괄 채운 뒤 개별 수정할 수 있습니다.' })
       ].concat(rows).concat([modScale]))
     ]);
@@ -854,8 +864,8 @@
   function renderKVSection(groupKey, labelText, opts) {
     var sectionOpts = Object.assign({ label: labelText }, opts || {});
     return el('details', detailsAttrs('grp-' + groupKey, false, 'group'), [
-      groupHeader(labelText, groupKey),
-      el('div', { class: 'group-body' }, [renderKVGroup(groupKey, sectionOpts)])
+      el('summary', { text: labelText }),
+      el('div', { class: 'group-body' }, [groupResetBtn(labelText, groupKey), renderKVGroup(groupKey, sectionOpts)])
     ]);
   }
 
@@ -1316,7 +1326,7 @@
     }
 
     return el('details', detailsAttrs('grp-export', false, 'group'), [
-      groupHeader('내보내기(Export)', null),
+      el('summary', { text: '내보내기(Export)' }),
       el('div', { class: 'group-body kv-group-body' }, rows.concat([allRow, importRow, noteEl, statusEl]))
     ]);
   }
@@ -1441,18 +1451,21 @@
 
   // Global undo/redo shortcuts (heuristic #3). Registered once (not inside
   // render()) so re-renders never pile up duplicate listeners. Skipped while
-  // focus is inside a text-editable field so Cmd/Ctrl+Z there still performs
-  // the browser's native in-field text undo instead of surprising the user
-  // by jumping the whole app's history (heuristic #4: don't fight platform
-  // conventions). Number/range inputs and everything else fall through to
-  // the app-level undo/redo.
+  // focus is inside a field with native single-keystroke text undo (text
+  // inputs AND number inputs — H/Cpk/fontSize/curve/modular controls) so
+  // Cmd/Ctrl+Z there still performs the browser's in-field undo instead of
+  // surprising the user by jumping the whole app's history (heuristic #4:
+  // don't fight platform conventions). `range` is deliberately EXCLUDED —
+  // sliders have no native text-undo, so app-level store undo is the correct
+  // behavior there; everything outside a text-editable field also falls
+  // through to app-level undo/redo.
   document.addEventListener('keydown', function (e) {
     var key = e.key ? e.key.toLowerCase() : '';
     if (!(e.ctrlKey || e.metaKey) || key !== 'z') return;
     var t = document.activeElement;
     var tag = t && t.tagName;
     var isTextEditable = tag === 'TEXTAREA' ||
-      (tag === 'INPUT' && /^(text|search|email|url|tel|password)$/i.test(t.type)) ||
+      (tag === 'INPUT' && /^(text|search|email|url|tel|password|number)$/i.test(t.type)) ||
       (t && t.isContentEditable);
     if (isTextEditable) return;
     e.preventDefault();
