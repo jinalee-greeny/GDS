@@ -327,7 +327,87 @@
     return out;
   }
 
-  var FigmaMap = { hexToFigmaRGB: hexToFigmaRGB, variablesPlan: variablesPlan, GROUP_KEYS: GROUP_KEYS };
+  var WEIGHT_STYLE_MAP = { regular: 'Regular', medium: 'Medium', semibold: 'SemiBold', bold: 'Bold' };
+
+  // split on commas that are NOT inside parentheses (rgba(...) contains commas)
+  function splitTopLevel(s) {
+    var out = [], depth = 0, cur = '';
+    for (var i = 0; i < s.length; i++) {
+      var ch = s[i];
+      if (ch === '(') depth++;
+      else if (ch === ')') depth--;
+      if (ch === ',' && depth === 0) { out.push(cur); cur = ''; }
+      else cur += ch;
+    }
+    if (cur.trim() !== '') out.push(cur);
+    return out;
+  }
+
+  function parseShadowColor(token) {
+    var m = token.match(/rgba?\(([^)]+)\)/i);
+    if (m) {
+      var parts = m[1].split(',').map(function (p) { return parseFloat(p); });
+      return { r: parts[0] / 255, g: parts[1] / 255, b: parts[2] / 255, a: parts.length > 3 ? parts[3] : 1 };
+    }
+    var hx = token.match(/#([0-9a-f]{6})/i);
+    if (hx) {
+      var h = hx[1];
+      return { r: parseInt(h.slice(0,2),16)/255, g: parseInt(h.slice(2,4),16)/255, b: parseInt(h.slice(4,6),16)/255, a: 1 };
+    }
+    var hx3 = token.match(/#([0-9a-f])([0-9a-f])([0-9a-f])\b/i);
+    if (hx3) {
+      var h6 = hx3[1] + hx3[1] + hx3[2] + hx3[2] + hx3[3] + hx3[3];
+      return { r: parseInt(h6.slice(0,2),16)/255, g: parseInt(h6.slice(2,4),16)/255, b: parseInt(h6.slice(4,6),16)/255, a: 1 };
+    }
+    return { r: 0, g: 0, b: 0, a: 1 };
+  }
+
+  function shadowToEffects(css) {
+    return splitTopLevel(css).map(function (part) {
+      var s = part.trim();
+      var color = parseShadowColor(s);
+      // strip the color token, then read leading length numbers: x y blur [spread]
+      var lengths = s.replace(/rgba?\([^)]+\)/i, '').replace(/#[0-9a-f]{6}|#[0-9a-f]{3}\b/i, '')
+        .trim().split(/\s+/).filter(function (t) { return t !== ''; })
+        .map(function (t) { return parseFloat(t); });
+      return {
+        type: 'DROP_SHADOW',
+        color: color,
+        offset: { x: lengths[0] || 0, y: lengths[1] || 0 },
+        radius: lengths[2] || 0,
+        spread: lengths[3] || 0,
+        visible: true,
+        blendMode: 'NORMAL'
+      };
+    });
+  }
+
+  function effectStylePlan(config) {
+    return Object.keys(config.shadow).map(function (key) {
+      return { name: 'shadow/' + key, effects: shadowToEffects(config.shadow[key]) };
+    });
+  }
+
+  function textStylePlan(config, weights, family) {
+    var out = [];
+    var lh = parseFloat(config.lineHeight.normal) * 100;
+    var ls = parseFloat(config.letterSpacing.normal) * 100; // em -> percent
+    Object.keys(config.fontSize).forEach(function (sizeKey) {
+      (weights || []).forEach(function (wKey) {
+        out.push({
+          name: 'text/' + sizeKey + '/' + wKey,
+          fontSize: parseFloat(config.fontSize[sizeKey]),
+          fontName: { family: family, style: WEIGHT_STYLE_MAP[wKey] || 'Regular' },
+          lineHeight: { unit: 'PERCENT', value: lh },
+          letterSpacing: { unit: 'PERCENT', value: ls }
+        });
+      });
+    });
+    return out;
+  }
+
+  var FigmaMap = { hexToFigmaRGB: hexToFigmaRGB, variablesPlan: variablesPlan, GROUP_KEYS: GROUP_KEYS,
+    shadowToEffects: shadowToEffects, effectStylePlan: effectStylePlan, textStylePlan: textStylePlan, WEIGHT_STYLE_MAP: WEIGHT_STYLE_MAP };
   root.FigmaMap = FigmaMap;
   if (typeof module !== 'undefined' && module.exports) module.exports = FigmaMap;
 })(typeof window !== 'undefined' ? window : globalThis);
@@ -354,12 +434,17 @@ function indexVariables(collection) {
   return map;
 }
 
-function applyPlan(config, selection) {
+function indexByName(styles) {
+  var map = {};
+  for (var i = 0; i < styles.length; i++) map[styles[i].name] = styles[i];
+  return map;
+}
+
+function applyVariables(config, selection, acc) {
   var plan = FigmaMap.variablesPlan(config, selection, TokenCore);
   var collection = getOrCreateCollection('Foundations');
   var modeId = collection.modes[0].modeId;
   var existing = indexVariables(collection);
-  var created = 0, updated = 0, failed = [];
   for (var i = 0; i < plan.length; i++) {
     var item = plan[i];
     try {
@@ -372,21 +457,62 @@ function applyPlan(config, selection) {
       if (isNew) v = figma.variables.createVariable(item.name, collection, TYPE_MAP[item.type]);
       v.setValueForMode(modeId, item.value);
       // count only after the write succeeds; on throw the item lands only in failed[]
-      if (isNew) created++; else updated++;
-    } catch (e) {
-      failed.push({ name: item.name, error: (e && e.message) ? e.message : String(e) });
-    }
+      if (isNew) acc.created++; else acc.updated++;
+    } catch (e) { acc.failed.push({ name: item.name, error: (e && e.message) ? e.message : String(e) }); }
   }
-  return { created: created, updated: updated, failed: failed };
 }
 
-figma.ui.onmessage = function (msg) {
+function applyEffectStyles(config, acc) {
+  var plan = FigmaMap.effectStylePlan(config);
+  var existing = indexByName(figma.getLocalEffectStyles());
+  for (var i = 0; i < plan.length; i++) {
+    var item = plan[i];
+    try {
+      var s = existing[item.name], isNew = !s;
+      if (isNew) { s = figma.createEffectStyle(); s.name = item.name; }
+      s.effects = item.effects;
+      if (isNew) acc.created++; else acc.updated++;
+    } catch (e) { acc.failed.push({ name: item.name, error: (e && e.message) ? e.message : String(e) }); }
+  }
+}
+
+async function applyTextStyles(config, textOptions, acc) {
+  var plan = FigmaMap.textStylePlan(config, textOptions.weights, textOptions.family);
+  var existing = indexByName(figma.getLocalTextStyles());
+  for (var i = 0; i < plan.length; i++) {
+    var item = plan[i];
+    try {
+      await figma.loadFontAsync(item.fontName);
+      var s = existing[item.name], isNew = !s;
+      if (isNew) { s = figma.createTextStyle(); s.name = item.name; }
+      s.fontName = item.fontName;
+      s.fontSize = item.fontSize;
+      s.lineHeight = item.lineHeight;
+      s.letterSpacing = item.letterSpacing;
+      if (isNew) acc.created++; else acc.updated++;
+    } catch (e) {
+      var m = (e && e.message) ? e.message : String(e);
+      acc.failed.push({ name: item.name, error: '폰트 \'' + item.fontName.family + ' ' + item.fontName.style + '\'을 사용할 수 없습니다: ' + m });
+    }
+  }
+}
+
+async function applyPlan(config, selection, targets, textOptions) {
+  var acc = { created: 0, updated: 0, failed: [] };
+  targets = targets || { variables: true };
+  if (targets.variables) applyVariables(config, selection, acc);
+  if (targets.effectStyles) applyEffectStyles(config, acc);
+  if (targets.textStyles) await applyTextStyles(config, textOptions || { weights: [], family: '' }, acc);
+  return acc;
+}
+
+figma.ui.onmessage = async function (msg) {
   if (!msg || msg.type !== 'apply') return;
   var result;
   try {
-    result = applyPlan(msg.config, msg.selection);
+    result = await applyPlan(msg.config, msg.selection, msg.targets, msg.textOptions);
   } catch (e) {
-    result = { created: 0, updated: 0, failed: [{ name: '(collection)', error: (e && e.message) ? e.message : String(e) }] };
+    result = { created: 0, updated: 0, failed: [{ name: '(apply)', error: (e && e.message) ? e.message : String(e) }] };
   }
   figma.ui.postMessage({ type: 'result', created: result.created, updated: result.updated, failed: result.failed });
 };

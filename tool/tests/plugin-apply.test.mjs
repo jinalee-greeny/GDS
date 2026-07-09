@@ -22,13 +22,14 @@ function loadFigmaMap() {
 }
 const FM = loadFigmaMap();
 
-// applyPlan + its private helpers (TYPE_MAP, getOrCreateCollection, indexVariables) —
-// source-sliced straight out of plugin/code.src.js (the real SSOT template source, not
-// the generated plugin/code.js) between the `var TYPE_MAP` declaration and the
-// `figma.ui.onmessage = ...` line (which runs at import time and must NOT be evaluated
-// here — nor must the `figma.showUI(...)` call at the top of the file). This mirrors the
-// slice+vm pattern in tool/tests/roundtrip.test.mjs: if applyPlan needed anything beyond
-// the injected figma/FigmaMap/TokenCore globals, this eval would throw.
+// applyPlan + its private helpers (TYPE_MAP, getOrCreateCollection, indexVariables,
+// indexByName, applyVariables, applyEffectStyles, applyTextStyles) — source-sliced
+// straight out of plugin/code.src.js (the real SSOT template source, not the generated
+// plugin/code.js) between the `var TYPE_MAP` declaration and the `figma.ui.onmessage =
+// ...` line (which runs at import time and must NOT be evaluated here — nor must the
+// `figma.showUI(...)` call at the top of the file). This mirrors the slice+vm pattern in
+// tool/tests/roundtrip.test.mjs: if applyPlan needed anything beyond the injected
+// figma/FigmaMap/TokenCore globals, this eval would throw.
 function loadApplyPlan(figmaMock) {
   const srcPath = fileURLToPath(new URL('../../plugin/code.src.js', import.meta.url));
   const src = readFileSync(srcPath, 'utf8');
@@ -48,16 +49,29 @@ function loadApplyPlan(figmaMock) {
   return sandbox.applyPlan;
 }
 
-// Minimal figma.variables mock covering exactly what applyPlan/getOrCreateCollection/
-// indexVariables touch: getLocalVariableCollections, createVariableCollection,
-// createVariable (+ its returned variable's setValueForMode/remove), getVariableById.
-// Created variables are tracked in `variablesById` so re-apply / removal can find them
-// by id (via collection.variableIds) or by name (via indexVariables' own scan).
-function createFigmaMock() {
+// Full figma mock covering everything applyPlan/applyVariables/applyEffectStyles/
+// applyTextStyles touch:
+//  - variables: getLocalVariableCollections, createVariableCollection, createVariable
+//    (+ its returned variable's setValueForMode/remove), getVariableById. Created
+//    variables are tracked in `variablesById` so re-apply / removal can find them by id
+//    (via collection.variableIds) or by name (via indexVariables' own scan).
+//  - effect styles: getLocalEffectStyles/createEffectStyle, registry by id, name lookup
+//    via indexByName. Returned style objects expose {id,name,effects,remove()}.
+//  - text styles: getLocalTextStyles/createTextStyle, registry by id, same shape plus
+//    {fontName,fontSize,lineHeight,letterSpacing}.
+//  - loadFontAsync(fontName): resolves normally; rejects when fontName.family matches
+//    the harness's configured `missingFamily` (tests the font-fail path in
+//    applyTextStyles, which must catch the rejection and push a failed[] entry without
+//    aborting the rest of the batch).
+function createFigmaMock(opts) {
+  opts = opts || {};
   const collections = [];
   const variablesById = Object.create(null);
+  const effectStylesById = Object.create(null);
+  const textStylesById = Object.create(null);
   let counter = 0;
   let throwForName = null; // configurable: setValueForMode throws for this variable name
+  const missingFamily = opts.missingFamily || null;
 
   const figma = {
     variables: {
@@ -89,6 +103,34 @@ function createFigmaMock() {
         return v;
       },
       getVariableById(id) { return variablesById[id] || null; }
+    },
+    getLocalEffectStyles() { return Object.values(effectStylesById); },
+    createEffectStyle() {
+      counter += 1;
+      const id = 'effect-' + counter;
+      const s = {
+        id, name: '', effects: [],
+        remove() { delete effectStylesById[s.id]; }
+      };
+      effectStylesById[id] = s;
+      return s;
+    },
+    getLocalTextStyles() { return Object.values(textStylesById); },
+    createTextStyle() {
+      counter += 1;
+      const id = 'text-' + counter;
+      const s = {
+        id, name: '', fontName: null, fontSize: 0, lineHeight: null, letterSpacing: null,
+        remove() { delete textStylesById[s.id]; }
+      };
+      textStylesById[id] = s;
+      return s;
+    },
+    loadFontAsync(fontName) {
+      if (missingFamily && fontName && fontName.family === missingFamily) {
+        return Promise.reject(new Error('font not available: ' + fontName.family));
+      }
+      return Promise.resolve();
     }
   };
 
@@ -96,18 +138,30 @@ function createFigmaMock() {
     figma,
     collections,
     variablesById,
-    setThrowForName(name) { throwForName = name; }
+    effectStylesById,
+    textStylesById,
+    setThrowForName(name) { throwForName = name; },
+    _effectStyleCount() { return Object.keys(effectStylesById).length; },
+    _textStyleCount() { return Object.keys(textStylesById).length; }
   };
 }
 
-const SELECTION = ['radius']; // small, deterministic group
-
-test('applyPlan: first apply on an empty doc creates every plan item, updates none, fails none', () => {
-  const mock = createFigmaMock();
+// Shared harness factory: builds a fresh figma mock + the applyPlan sliced/eval'd
+// against it, so every test starts from a clean, isolated sandbox.
+function makeHarness(opts) {
+  const mock = createFigmaMock(opts);
   const applyPlan = loadApplyPlan(mock.figma);
+  return { applyPlan, figma: mock };
+}
+
+const SELECTION = ['radius']; // small, deterministic group
+const ALL_OFF_TARGETS = { variables: false, textStyles: false, effectStyles: false };
+
+test('applyPlan: first apply on an empty doc creates every plan item, updates none, fails none', async () => {
+  const { applyPlan, figma: mock } = makeHarness();
   const plan = FM.variablesPlan(C.DEFAULT_CONFIG, SELECTION, C);
 
-  const result = applyPlan(C.DEFAULT_CONFIG, SELECTION);
+  const result = await applyPlan(C.DEFAULT_CONFIG, SELECTION, { variables: true, textStyles: false, effectStyles: false }, { weights: [], family: 'X' });
 
   assert.equal(result.created, plan.length);
   assert.equal(result.updated, 0);
@@ -132,15 +186,16 @@ test('applyPlan: first apply on an empty doc creates every plan item, updates no
   });
 });
 
-test('applyPlan: re-applying the same config/selection updates every item, creates none, no duplicate variables or collections (idempotent)', () => {
-  const mock = createFigmaMock();
-  const applyPlan = loadApplyPlan(mock.figma);
+test('applyPlan: re-applying the same config/selection updates every item, creates none, no duplicate variables or collections (idempotent)', async () => {
+  const { applyPlan, figma: mock } = makeHarness();
   const plan = FM.variablesPlan(C.DEFAULT_CONFIG, SELECTION, C);
+  const targets = { variables: true, textStyles: false, effectStyles: false };
+  const textOptions = { weights: [], family: 'X' };
 
-  applyPlan(C.DEFAULT_CONFIG, SELECTION); // first apply
+  await applyPlan(C.DEFAULT_CONFIG, SELECTION, targets, textOptions); // first apply
   const before = mock.collections[0].variableIds.slice().sort();
 
-  const result = applyPlan(C.DEFAULT_CONFIG, SELECTION); // re-apply, identical input
+  const result = await applyPlan(C.DEFAULT_CONFIG, SELECTION, targets, textOptions); // re-apply, identical input
 
   assert.equal(result.updated, plan.length);
   assert.equal(result.created, 0);
@@ -155,14 +210,13 @@ test('applyPlan: re-applying the same config/selection updates every item, creat
   assert.equal(JSON.stringify(after), JSON.stringify(before));
 });
 
-test('applyPlan: a write failure lands the item only in failed[], not counted as created or updated', () => {
-  const mock = createFigmaMock();
-  const applyPlan = loadApplyPlan(mock.figma);
+test('applyPlan: a write failure lands the item only in failed[], not counted as created or updated', async () => {
+  const { applyPlan, figma: mock } = makeHarness();
   const plan = FM.variablesPlan(C.DEFAULT_CONFIG, SELECTION, C);
   const badName = plan[0].name;
   mock.setThrowForName(badName);
 
-  const result = applyPlan(C.DEFAULT_CONFIG, SELECTION);
+  const result = await applyPlan(C.DEFAULT_CONFIG, SELECTION, { variables: true, textStyles: false, effectStyles: false }, { weights: [], family: 'X' });
 
   assert.equal(result.created, plan.length - 1);
   assert.equal(result.updated, 0);
@@ -172,8 +226,8 @@ test('applyPlan: a write failure lands the item only in failed[], not counted as
   assert.ok(result.failed[0].error.length > 0);
 });
 
-test('applyPlan: a resolvedType mismatch removes+recreates the variable, counting it as created (no duplicate)', () => {
-  const mock = createFigmaMock();
+test('applyPlan: a resolvedType mismatch removes+recreates the variable, counting it as created (no duplicate)', async () => {
+  const { figma: mock } = makeHarness();
   const plan = FM.variablesPlan(C.DEFAULT_CONFIG, SELECTION, C);
   const changedItem = plan[0];
   const wrongType = changedItem.type === 'STRING' ? 'FLOAT' : 'STRING';
@@ -185,7 +239,7 @@ test('applyPlan: a resolvedType mismatch removes+recreates the variable, countin
   const oldId = oldVar.id;
 
   const applyPlan = loadApplyPlan(mock.figma);
-  const result = applyPlan(C.DEFAULT_CONFIG, SELECTION);
+  const result = await applyPlan(C.DEFAULT_CONFIG, SELECTION, { variables: true, textStyles: false, effectStyles: false }, { weights: [], family: 'X' });
 
   assert.equal(result.created, plan.length); // type-changed item counted as created, not updated
   assert.equal(result.updated, 0);
@@ -205,4 +259,49 @@ test('applyPlan: a resolvedType mismatch removes+recreates the variable, countin
   assert.ok(replacement, 'replacement variable for ' + changedItem.name + ' not found');
   assert.equal(replacement.resolvedType, changedItem.type);
   assert.equal(JSON.stringify(replacement.values.m), JSON.stringify(changedItem.value));
+});
+
+test('apply with effectStyles target creates effect styles idempotently', async () => {
+  const { applyPlan, figma } = makeHarness();
+  const targets = { variables: false, textStyles: false, effectStyles: true };
+  const r1 = await applyPlan(C.DEFAULT_CONFIG, [], targets, { weights: [], family: 'X' });
+  assert.equal(r1.created, 5); // 5 shadow tokens
+  assert.equal(r1.failed.length, 0);
+  const r2 = await applyPlan(C.DEFAULT_CONFIG, [], targets, { weights: [], family: 'X' });
+  assert.equal(r2.updated, 5);
+  assert.equal(r2.created, 0);
+  assert.equal(figma._effectStyleCount(), 5); // no duplicates
+});
+
+test('apply with textStyles target loads fonts and creates styles', async () => {
+  const { applyPlan } = makeHarness();
+  const targets = { variables: false, textStyles: true, effectStyles: false };
+  const r = await applyPlan(C.DEFAULT_CONFIG, [], targets, { weights: ['regular'], family: 'Pretendard' });
+  assert.equal(r.created, 11); // 11 sizes x 1 weight
+  assert.equal(r.failed.length, 0);
+});
+
+test('text style with an unavailable font lands only in failed[], not counted', async () => {
+  const { applyPlan, figma } = makeHarness({ missingFamily: 'Pretendard' });
+  const targets = { variables: false, textStyles: true, effectStyles: false };
+  const r = await applyPlan(C.DEFAULT_CONFIG, [], targets, { weights: ['regular'], family: 'Pretendard' });
+  assert.equal(r.created, 0);
+  assert.equal(r.failed.length, 11);
+  assert.ok(/Pretendard/.test(r.failed[0].error));
+});
+
+test('variables still work through the targets gate', async () => {
+  const { applyPlan } = makeHarness();
+  const targets = { variables: true, textStyles: false, effectStyles: false };
+  const r = await applyPlan(C.DEFAULT_CONFIG, ['radius'], targets, { weights: [], family: 'X' });
+  assert.ok(r.created > 0);
+});
+
+test('apply with all targets off performs no writes and returns zeroed result', async () => {
+  const { applyPlan, figma } = makeHarness();
+  const r = await applyPlan(C.DEFAULT_CONFIG, SELECTION, ALL_OFF_TARGETS, { weights: [], family: 'X' });
+  assert.equal(r.created, 0);
+  assert.equal(r.updated, 0);
+  assert.equal(r.failed.length, 0);
+  assert.equal(figma.collections.length, 0);
 });

@@ -61,3 +61,84 @@ test('selection filters groups; empty selection -> empty plan; idempotent', () =
   const b = FM.variablesPlan(C.DEFAULT_CONFIG, FM.GROUP_KEYS, C);
   assert.equal(JSON.stringify(a), JSON.stringify(b));
 });
+
+test('shadowToEffects parses a single CSS drop shadow', () => {
+  const e = FM.shadowToEffects('0 2px 6px rgba(0,0,0,0.10)');
+  assert.equal(e.length, 1);
+  assert.equal(JSON.stringify(e[0]), JSON.stringify({
+    type: 'DROP_SHADOW',
+    color: { r: 0, g: 0, b: 0, a: 0.1 },
+    offset: { x: 0, y: 2 },
+    radius: 6,
+    spread: 0,
+    visible: true,
+    blendMode: 'NORMAL'
+  }));
+});
+
+test('shadowToEffects supports spread and multiple comma-separated shadows', () => {
+  const e = FM.shadowToEffects('0 1px 2px 1px rgba(0,0,0,0.2), 0 4px 8px rgba(0,0,0,0.1)');
+  assert.equal(e.length, 2);
+  assert.equal(e[0].spread, 1);
+  assert.equal(JSON.stringify(e[0].offset), JSON.stringify({ x: 0, y: 1 }));
+  assert.equal(e[0].radius, 2);
+  assert.equal(e[1].spread, 0);
+  assert.equal(e[1].radius, 8);
+});
+
+test('shadowToEffects parses hex color with default full alpha', () => {
+  const e = FM.shadowToEffects('0 0 4px #FF0000');
+  assert.equal(JSON.stringify(e[0].color), JSON.stringify({ r: 1, g: 0, b: 0, a: 1 }));
+});
+
+test('effectStylePlan maps all shadow tokens in order', () => {
+  const plan = FM.effectStylePlan(C.DEFAULT_CONFIG);
+  assert.equal(JSON.stringify(plan.map(p => p.name)),
+    JSON.stringify(['shadow/sm','shadow/md','shadow/lg','shadow/xl','shadow/2xl']));
+  const md = plan.find(p => p.name === 'shadow/md');
+  assert.equal(md.effects[0].radius, 6);
+  assert.equal(md.effects[0].offset.y, 2);
+});
+
+test('textStylePlan builds size x weight styles with mapped font style names', () => {
+  const plan = FM.textStylePlan(C.DEFAULT_CONFIG, ['regular','bold'], 'Pretendard');
+  // 11 sizes x 2 weights = 22
+  assert.equal(plan.length, 22);
+  const mdBold = plan.find(p => p.name === 'text/md/bold');
+  assert.equal(JSON.stringify(mdBold), JSON.stringify({
+    name: 'text/md/bold',
+    fontSize: 16,
+    fontName: { family: 'Pretendard', style: 'Bold' },
+    lineHeight: { unit: 'PERCENT', value: 150 },
+    letterSpacing: { unit: 'PERCENT', value: 0 }
+  }));
+  // family override respected; unselected weight absent
+  assert.ok(plan.every(p => p.fontName.family === 'Pretendard'));
+  assert.ok(!plan.some(p => p.name.endsWith('/medium')));
+});
+
+test('textStylePlan empty weights -> empty plan', () => {
+  assert.equal(JSON.stringify(FM.textStylePlan(C.DEFAULT_CONFIG, [], 'X')), JSON.stringify([]));
+});
+
+test('shadowToEffects parses plain rgb() (no alpha) color', () => {
+  const e = FM.shadowToEffects('0 1px 2px rgb(255,0,0)');
+  assert.equal(JSON.stringify(e[0].color), JSON.stringify({ r: 1, g: 0, b: 0, a: 1 }));
+  assert.equal(JSON.stringify(e[0].offset), JSON.stringify({ x: 0, y: 1 }));
+  assert.equal(e[0].radius, 2);
+  assert.equal(e[0].spread, 0);
+});
+
+test('shadowToEffects parses 3-digit hex color and does not leak NaN lengths', () => {
+  const e = FM.shadowToEffects('0 0 4px #f00');
+  assert.equal(JSON.stringify(e[0].color), JSON.stringify({ r: 1, g: 0, b: 0, a: 1 }));
+  assert.equal(e[0].radius, 4);
+  assert.equal(JSON.stringify(e[0].offset), JSON.stringify({ x: 0, y: 0 }));
+});
+
+test('textStylePlan falls back to Regular style for unknown weight keys', () => {
+  const plan = FM.textStylePlan(C.DEFAULT_CONFIG, ['bogus'], 'Pretendard');
+  const first = plan.find(p => p.name.endsWith('/bogus'));
+  assert.ok(first);
+  assert.equal(first.fontName.style, 'Regular');
+});
