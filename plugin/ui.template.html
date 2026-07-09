@@ -1,11 +1,12 @@
 <div id="toolbar"></div>
 <div id="app"></div>
+<div id="cta-bar"></div>
 <style>
 /*__STUDIO_CSS__*/
-/* ---- Plugin-shell-only rules (Variables range + Apply section) ----
-   Not part of core/studio.css: this box mimics the shared `details.group`
-   look (border/radius/bg) but is a plain <div>, since it is never
-   collapsible. */
+/* ---- Plugin-shell-only rules (output-target section + sticky CTA bar) ----
+   Not part of core/studio.css: the `.group` box mimics the shared
+   `details.group` look (border/radius/bg) but is a plain <div>, since it is
+   never collapsible. */
 .group {
   border: 1px solid #ddd; border-radius: 6px; margin-bottom: 12px;
   background: #fff; padding: 10px 12px;
@@ -15,13 +16,22 @@
   display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 4px 8px; margin-bottom: 10px;
 }
-.sel-row { display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; }
 .sel-row input[type="checkbox"] { margin: 0; }
-.apply-btn { font-weight: 600; }
-.apply-result, .apply-hint { font-size: 11px; color: #666; margin: 8px 0 0; }
+#cta-bar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 100;
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 16px; border-top: 1px solid #ddd; background: #fff;
+}
+#cta-bar .apply-btn { font-weight: 600; padding: 8px 16px; }
+#cta-bar .cta-result { font-size: 12px; color: #666; }
+#app { padding-bottom: 64px; } /* room for the fixed bar */
+.sel-row, .wt-row { display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; }
+.font-input { width: 100%; box-sizing: border-box; margin-top: 6px; padding: 4px 6px; }
+.font-label { display: block; font-size: 12px; margin-top: 8px; }
 @media (prefers-color-scheme: dark) {
   .group { background: #232323; border-color: #3a3a3a; }
-  .apply-result, .apply-hint { color: #999; }
+  #cta-bar { background: #232323; border-color: #3a3a3a; }
+  #cta-bar .cta-result { color: #999; }
 }
 </style>
 <script id="token-core">
@@ -35,42 +45,50 @@
 </script>
 <script>
 // ---- Plugin UI shell: wires core/studio-ui.js createStudio() to this page,
-// and owns the "Figma Variables" range + Apply section (plugin-shell-only
-// UI, supplied to createStudio() via rightColumnExtras). Mirrors
+// and owns the output-target section (Variables / Text Styles / Effect
+// Styles, plugin-shell-only UI supplied to createStudio() via
+// rightColumnExtras) plus the sticky bottom "Figma에 적용" CTA bar. Mirrors
 // tool/index.template.html's web shell, swapping the export/import panel
-// for a Variables-range checklist + Apply button that postMessages to the
-// Figma plugin main thread (code.js, implemented in a later task). ----
+// for the target-selection UI + an Apply button that postMessages to the
+// Figma plugin main thread (code.src.js). ----
 (function () {
   'use strict';
   var C = window.TokenCore;
   var FM = window.FigmaMap;
   var store = C.createStore();
-  var selection = FM.GROUP_KEYS.slice(); // default: all groups selected
+  var selection = FM.GROUP_KEYS.slice(); // Variables: default all groups selected
+  var targets = { variables: true, textStyles: false, effectStyles: false };
+  var textWeights = ['regular']; // Text Styles: which weights to generate
+  var fontFamily = 'Pretendard'; // Text Styles: font family for the text nodes
+  // lastResult: the most recent {type:'result', created, updated, failed}
+  // message from the plugin main thread, or null before any Apply. Unlike
+  // the Variables-only prototype this replaces, lastResult is now rendered
+  // into #cta-bar — a sibling of #app, NOT inside it — so it survives
+  // studio.render()'s full rebuild of #app/#toolbar untouched. It only ever
+  // changes via the onmessage handler below (renderCTA() called there), so
+  // there is no stale-banner risk to guard against (no resultJustHappened
+  // flag needed): #cta-bar is simply never rebuilt by an unrelated store
+  // change, so it can only ever show the last real apply result.
   var lastResult = null;
-  // resultJustHappened: read-once-then-reset idiom (mirrors importJustHappened
-  // in tool/index.template.html). lastResult is set when a 'result' message
-  // arrives from the plugin main thread, but studio.render() fully rebuilds
-  // the panel on EVERY store change (e.g. the user tweaking a token after
-  // Apply) — without this guard the "생성 N · 갱신 M · 실패 K" banner would
-  // keep describing a stale apply long after the config changed, violating
-  // heuristic #1 (state visibility must reflect current reality). Set true
-  // immediately before the render() call that follows a 'result' message;
-  // read once then reset to false at the top of renderApplySection(), which
-  // runs exactly once per Studio render (as rightColumnExtras) — so any
-  // render NOT caused by an apply result silently clears lastResult.
-  var resultJustHappened = false;
 
-  function renderApplySection(cfg) {
-    if (!resultJustHappened) { lastResult = null; } else { resultJustHappened = false; }
+  // rightColumnExtras(cfg): three output-target boxes appended to the LEFT
+  // panel column, in the same DOM slot the old Variables-range box used to
+  // occupy. Called by studio.render() on every store change, so it must
+  // rebuild fresh nodes each time (same free-standing-checkbox pattern as
+  // the rest of this file: set `.checked`/`.value` as a DOM PROPERTY on the
+  // fresh node, never through el()'s attrs, since el() does setAttribute()
+  // for anything that isn't class/on*/text — setAttribute('checked',
+  // undefined) would stringify to "undefined" and force every box checked).
+  function renderOutputTargets(cfg) {
     var el = studio.el;
+
+    // ---- 1. Variables ----
+    var varsEnableId = 'target-variables';
+    var varsEnable = el('input', { type: 'checkbox', id: varsEnableId,
+      onchange: function (e) { targets.variables = e.target.checked; } });
+    varsEnable.checked = targets.variables;
     var checks = FM.GROUP_KEYS.map(function (g) {
       var id = 'sel-' + g;
-      // NOTE: do NOT pass `checked` through el()'s attrs — el() does
-      // setAttribute(k, v) for every present key, so setAttribute('checked',
-      // undefined) stringifies to "undefined" and forces the box checked on
-      // every rebuild (render() rebuilds the whole panel on each store
-      // change), desyncing the visible tick from the `selection` array.
-      // Set the DOM .checked PROPERTY on the fresh node each render instead.
       var cb = el('input', { type: 'checkbox', id: id,
         onchange: function (e) {
           var i = selection.indexOf(g);
@@ -80,46 +98,109 @@
       cb.checked = selection.indexOf(g) >= 0;
       return el('label', { class: 'sel-row', for: id }, [cb, ' ' + g]);
     });
+    var variablesGroup = el('div', { class: 'group' }, [
+      el('label', { class: 'group-title sel-row', for: varsEnableId }, [varsEnable, ' Figma Variables']),
+      el('div', { class: 'sel-grid' }, checks)
+    ]);
+
+    // ---- 2. Text Styles ----
+    var textEnableId = 'target-textStyles';
+    var textEnable = el('input', { type: 'checkbox', id: textEnableId,
+      onchange: function (e) { targets.textStyles = e.target.checked; } });
+    textEnable.checked = targets.textStyles;
+    var weightChecks = ['regular', 'medium', 'semibold', 'bold'].map(function (w) {
+      var id = 'wt-' + w;
+      var cb = el('input', { type: 'checkbox', id: id,
+        onchange: function (e) {
+          var i = textWeights.indexOf(w);
+          if (e.target.checked && i < 0) textWeights.push(w);
+          else if (!e.target.checked && i >= 0) textWeights.splice(i, 1);
+        } });
+      cb.checked = textWeights.indexOf(w) >= 0;
+      return el('label', { class: 'wt-row', for: id }, [cb, ' ' + w]);
+    });
+    // Stable id (not derived from any render-cycle counter) so the shared
+    // render()'s focus/caret-preservation-by-id (captureUIState/
+    // restoreUIState in core/studio-ui.js) can re-latch onto this exact
+    // input across a full #app rebuild — without it, typing here while any
+    // other store-driven re-render fires would drop focus/caret mid-word.
+    var fontInputId = 'plugin-font-family';
+    var fontLabel = el('label', { class: 'font-label', for: fontInputId, text: '폰트 패밀리' });
+    var fontInput = el('input', { type: 'text', id: fontInputId, class: 'font-input',
+      value: fontFamily, 'aria-label': '폰트 패밀리',
+      oninput: function (e) { fontFamily = e.target.value; } });
+    var textGroup = el('div', { class: 'group' }, [
+      el('label', { class: 'group-title sel-row', for: textEnableId }, [textEnable, ' Text Styles']),
+      el('div', { class: 'sel-grid' }, weightChecks),
+      fontLabel, fontInput
+    ]);
+
+    // ---- 3. Effect Styles ----
+    var fxEnableId = 'target-effectStyles';
+    var fxEnable = el('input', { type: 'checkbox', id: fxEnableId,
+      onchange: function (e) { targets.effectStyles = e.target.checked; } });
+    fxEnable.checked = targets.effectStyles;
+    var effectGroup = el('div', { class: 'group' }, [
+      el('label', { class: 'group-title sel-row', for: fxEnableId }, [fxEnable, ' Effect Styles'])
+    ]);
+
+    return [variablesGroup, textGroup, effectGroup];
+  }
+
+  // renderCTA(): (re)builds the ALWAYS-VISIBLE #cta-bar — a sibling of
+  // #app/#toolbar, so studio.render() never touches it. It is rendered
+  // exactly twice: once here at boot (so the button is visible before any
+  // store change), and once inside the onmessage 'result' handler below.
+  // The Apply button itself reads store/selection/targets/textWeights/
+  // fontFamily from the enclosing closure AT CLICK TIME, so it stays
+  // correct without needing to be rebuilt on every keystroke/store change.
+  function renderCTA() {
+    var el = studio.el;
+    var bar = document.getElementById('cta-bar');
+    bar.innerHTML = '';
     var applyBtn = el('button', { class: 'apply-btn', text: 'Figma에 적용',
       onclick: function () {
         parent.postMessage({ pluginMessage: {
-          type: 'apply', config: store.get(), selection: selection.slice()
+          type: 'apply',
+          config: store.get(),
+          selection: selection.slice(),
+          targets: { variables: targets.variables, textStyles: targets.textStyles, effectStyles: targets.effectStyles },
+          textOptions: { weights: textWeights.slice(), family: fontFamily }
         } }, '*');
       } });
-    var result = lastResult
-      ? el('p', { class: 'apply-result', text:
-          '생성 ' + lastResult.created + ' · 갱신 ' + lastResult.updated +
-          ' · 실패 ' + (lastResult.failed || []).length })
-      : el('p', { class: 'apply-hint', text: '선택한 그룹을 Figma Variables로 생성/갱신합니다.' });
-    return el('div', { class: 'group' }, [
-      el('div', { class: 'group-title', text: 'Figma Variables' }),
-      el('div', { class: 'sel-grid' }, checks),
-      applyBtn, result
-    ]);
+    var resultText = '';
+    if (lastResult) {
+      var failed = lastResult.failed || [];
+      resultText = '생성 ' + lastResult.created + ' · 갱신 ' + lastResult.updated + ' · 실패 ' + failed.length;
+      if (failed.length) resultText += ' (' + failed[0].name + ': ' + failed[0].error + ')';
+    }
+    bar.appendChild(applyBtn);
+    bar.appendChild(el('span', { class: 'cta-result', text: resultText }));
   }
 
   var studio = window.StudioUI.createStudio({
     C: C, store: store,
     appEl: document.getElementById('app'),
     toolbarEl: document.getElementById('toolbar'),
-    rightColumnExtras: renderApplySection
+    rightColumnExtras: renderOutputTargets
   });
+
+  renderCTA();
 
   window.onmessage = function (event) {
     var msg = event.data && event.data.pluginMessage;
     if (!msg || msg.type !== 'result') return;
     lastResult = msg;
-    resultJustHappened = true;
-    studio.render();
+    renderCTA();
   };
 
   // Kick off the first paint (createStudio() deliberately does not call
   // render() itself — see the NOTE above its `return { render, el,
   // detailsAttrs }` in core/studio-ui.js: rightColumnExtras callbacks that
-  // need `studio.el` (like renderApplySection above) would crash if render()
-  // ran synchronously inside createStudio(), before this IIFE could capture
-  // the returned `studio` binding). Every subsequent render is already
-  // wired via store.subscribe(render) inside the factory.
+  // need `studio.el` (like renderOutputTargets above) would crash if
+  // render() ran synchronously inside createStudio(), before this IIFE
+  // could capture the returned `studio` binding). Every subsequent render
+  // is already wired via store.subscribe(render) inside the factory.
   studio.render();
 }());
 </script>
