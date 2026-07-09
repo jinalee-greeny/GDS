@@ -37,13 +37,11 @@ function applyPlan(config, selection) {
         // type changed — remove and recreate to avoid setValueForMode type error
         v.remove(); v = null;
       }
-      if (!v) {
-        v = figma.variables.createVariable(item.name, collection, TYPE_MAP[item.type]);
-        created++;
-      } else {
-        updated++;
-      }
+      var isNew = !v;
+      if (isNew) v = figma.variables.createVariable(item.name, collection, TYPE_MAP[item.type]);
       v.setValueForMode(modeId, item.value);
+      // count only after the write succeeds; on throw the item lands only in failed[]
+      if (isNew) created++; else updated++;
     } catch (e) {
       failed.push({ name: item.name, error: (e && e.message) ? e.message : String(e) });
     }
