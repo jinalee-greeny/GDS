@@ -31,5 +31,16 @@ def main():
     write("tool/index.html", web)
     print("wrote tool/index.html")
 
+    # --- figma plugin UI ---
+    figma_map = read("core/figma-map.js").rstrip("\n")
+    plugin_ui = inject(read("plugin/ui.template.html"), {
+        "/*__TOKEN_CORE__*/": token_core,
+        "/*__STUDIO_UI__*/": studio_ui,
+        "/*__FIGMA_MAP__*/": figma_map,
+        "/*__STUDIO_CSS__*/": studio_css,
+    })
+    write("plugin/ui.html", plugin_ui)
+    print("wrote plugin/ui.html")
+
 if __name__ == "__main__":
     main()
