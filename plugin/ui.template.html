@@ -1,0 +1,125 @@
+<div id="toolbar"></div>
+<div id="app"></div>
+<style>
+/*__STUDIO_CSS__*/
+/* ---- Plugin-shell-only rules (Variables range + Apply section) ----
+   Not part of core/studio.css: this box mimics the shared `details.group`
+   look (border/radius/bg) but is a plain <div>, since it is never
+   collapsible. */
+.group {
+  border: 1px solid #ddd; border-radius: 6px; margin-bottom: 12px;
+  background: #fff; padding: 10px 12px;
+}
+.group-title { font-weight: 600; margin-bottom: 8px; }
+.sel-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 4px 8px; margin-bottom: 10px;
+}
+.sel-row { display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; }
+.sel-row input[type="checkbox"] { margin: 0; }
+.apply-btn { font-weight: 600; }
+.apply-result, .apply-hint { font-size: 11px; color: #666; margin: 8px 0 0; }
+@media (prefers-color-scheme: dark) {
+  .group { background: #232323; border-color: #3a3a3a; }
+  .apply-result, .apply-hint { color: #999; }
+}
+</style>
+<script id="token-core">
+/*__TOKEN_CORE__*/
+</script>
+<script id="studio-ui">
+/*__STUDIO_UI__*/
+</script>
+<script id="figma-map">
+/*__FIGMA_MAP__*/
+</script>
+<script>
+// ---- Plugin UI shell: wires core/studio-ui.js createStudio() to this page,
+// and owns the "Figma Variables" range + Apply section (plugin-shell-only
+// UI, supplied to createStudio() via rightColumnExtras). Mirrors
+// tool/index.template.html's web shell, swapping the export/import panel
+// for a Variables-range checklist + Apply button that postMessages to the
+// Figma plugin main thread (code.js, implemented in a later task). ----
+(function () {
+  'use strict';
+  var C = window.TokenCore;
+  var FM = window.FigmaMap;
+  var store = C.createStore();
+  var selection = FM.GROUP_KEYS.slice(); // default: all groups selected
+  var lastResult = null;
+  // resultJustHappened: read-once-then-reset idiom (mirrors importJustHappened
+  // in tool/index.template.html). lastResult is set when a 'result' message
+  // arrives from the plugin main thread, but studio.render() fully rebuilds
+  // the panel on EVERY store change (e.g. the user tweaking a token after
+  // Apply) — without this guard the "생성 N · 갱신 M · 실패 K" banner would
+  // keep describing a stale apply long after the config changed, violating
+  // heuristic #1 (state visibility must reflect current reality). Set true
+  // immediately before the render() call that follows a 'result' message;
+  // read once then reset to false at the top of renderApplySection(), which
+  // runs exactly once per Studio render (as rightColumnExtras) — so any
+  // render NOT caused by an apply result silently clears lastResult.
+  var resultJustHappened = false;
+
+  function renderApplySection(cfg) {
+    if (!resultJustHappened) { lastResult = null; } else { resultJustHappened = false; }
+    var el = studio.el;
+    var checks = FM.GROUP_KEYS.map(function (g) {
+      var id = 'sel-' + g;
+      // NOTE: do NOT pass `checked` through el()'s attrs — el() does
+      // setAttribute(k, v) for every present key, so setAttribute('checked',
+      // undefined) stringifies to "undefined" and forces the box checked on
+      // every rebuild (render() rebuilds the whole panel on each store
+      // change), desyncing the visible tick from the `selection` array.
+      // Set the DOM .checked PROPERTY on the fresh node each render instead.
+      var cb = el('input', { type: 'checkbox', id: id,
+        onchange: function (e) {
+          var i = selection.indexOf(g);
+          if (e.target.checked && i < 0) selection.push(g);
+          else if (!e.target.checked && i >= 0) selection.splice(i, 1);
+        } });
+      cb.checked = selection.indexOf(g) >= 0;
+      return el('label', { class: 'sel-row', for: id }, [cb, ' ' + g]);
+    });
+    var applyBtn = el('button', { class: 'apply-btn', text: 'Figma에 적용',
+      onclick: function () {
+        parent.postMessage({ pluginMessage: {
+          type: 'apply', config: store.get(), selection: selection.slice()
+        } }, '*');
+      } });
+    var result = lastResult
+      ? el('p', { class: 'apply-result', text:
+          '생성 ' + lastResult.created + ' · 갱신 ' + lastResult.updated +
+          ' · 실패 ' + (lastResult.failed || []).length })
+      : el('p', { class: 'apply-hint', text: '선택한 그룹을 Figma Variables로 생성/갱신합니다.' });
+    return el('div', { class: 'group' }, [
+      el('div', { class: 'group-title', text: 'Figma Variables' }),
+      el('div', { class: 'sel-grid' }, checks),
+      applyBtn, result
+    ]);
+  }
+
+  var studio = window.StudioUI.createStudio({
+    C: C, store: store,
+    appEl: document.getElementById('app'),
+    toolbarEl: document.getElementById('toolbar'),
+    rightColumnExtras: renderApplySection
+  });
+
+  window.onmessage = function (event) {
+    var msg = event.data && event.data.pluginMessage;
+    if (!msg || msg.type !== 'result') return;
+    lastResult = msg;
+    resultJustHappened = true;
+    studio.render();
+  };
+
+  // Kick off the first paint (createStudio() deliberately does not call
+  // render() itself — see the NOTE above its `return { render, el,
+  // detailsAttrs }` in core/studio-ui.js: rightColumnExtras callbacks that
+  // need `studio.el` (like renderApplySection above) would crash if render()
+  // ran synchronously inside createStudio(), before this IIFE could capture
+  // the returned `studio` binding). Every subsequent render is already
+  // wired via store.subscribe(render) inside the factory.
+  studio.render();
+}());
+</script>
