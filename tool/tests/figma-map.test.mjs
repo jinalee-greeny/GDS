@@ -120,3 +120,25 @@ test('textStylePlan builds size x weight styles with mapped font style names', (
 test('textStylePlan empty weights -> empty plan', () => {
   assert.equal(JSON.stringify(FM.textStylePlan(C.DEFAULT_CONFIG, [], 'X')), JSON.stringify([]));
 });
+
+test('shadowToEffects parses plain rgb() (no alpha) color', () => {
+  const e = FM.shadowToEffects('0 1px 2px rgb(255,0,0)');
+  assert.equal(JSON.stringify(e[0].color), JSON.stringify({ r: 1, g: 0, b: 0, a: 1 }));
+  assert.equal(JSON.stringify(e[0].offset), JSON.stringify({ x: 0, y: 1 }));
+  assert.equal(e[0].radius, 2);
+  assert.equal(e[0].spread, 0);
+});
+
+test('shadowToEffects parses 3-digit hex color and does not leak NaN lengths', () => {
+  const e = FM.shadowToEffects('0 0 4px #f00');
+  assert.equal(JSON.stringify(e[0].color), JSON.stringify({ r: 1, g: 0, b: 0, a: 1 }));
+  assert.equal(e[0].radius, 4);
+  assert.equal(JSON.stringify(e[0].offset), JSON.stringify({ x: 0, y: 0 }));
+});
+
+test('textStylePlan falls back to Regular style for unknown weight keys', () => {
+  const plan = FM.textStylePlan(C.DEFAULT_CONFIG, ['bogus'], 'Pretendard');
+  const first = plan.find(p => p.name.endsWith('/bogus'));
+  assert.ok(first);
+  assert.equal(first.fontName.style, 'Regular');
+});
