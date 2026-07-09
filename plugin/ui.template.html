@@ -52,13 +52,19 @@
     var el = studio.el;
     var checks = FM.GROUP_KEYS.map(function (g) {
       var id = 'sel-' + g;
+      // NOTE: do NOT pass `checked` through el()'s attrs — el() does
+      // setAttribute(k, v) for every present key, so setAttribute('checked',
+      // undefined) stringifies to "undefined" and forces the box checked on
+      // every rebuild (render() rebuilds the whole panel on each store
+      // change), desyncing the visible tick from the `selection` array.
+      // Set the DOM .checked PROPERTY on the fresh node each render instead.
       var cb = el('input', { type: 'checkbox', id: id,
-        checked: selection.indexOf(g) >= 0 ? 'checked' : undefined,
         onchange: function (e) {
           var i = selection.indexOf(g);
           if (e.target.checked && i < 0) selection.push(g);
           else if (!e.target.checked && i >= 0) selection.splice(i, 1);
         } });
+      cb.checked = selection.indexOf(g) >= 0;
       return el('label', { class: 'sel-row', for: id }, [cb, ' ' + g]);
     });
     var applyBtn = el('button', { class: 'apply-btn', text: 'Figma에 적용',
@@ -70,7 +76,7 @@
     var result = lastResult
       ? el('p', { class: 'apply-result', text:
           '생성 ' + lastResult.created + ' · 갱신 ' + lastResult.updated +
-          ' · 실패 ' + lastResult.failed.length })
+          ' · 실패 ' + (lastResult.failed || []).length })
       : el('p', { class: 'apply-hint', text: '선택한 그룹을 Figma Variables로 생성/갱신합니다.' });
     return el('div', { class: 'group' }, [
       el('div', { class: 'group-title', text: 'Figma Variables' }),
