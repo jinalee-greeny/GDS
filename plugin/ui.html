@@ -1366,8 +1366,21 @@
   var store = C.createStore();
   var selection = FM.GROUP_KEYS.slice(); // default: all groups selected
   var lastResult = null;
+  // resultJustHappened: read-once-then-reset idiom (mirrors importJustHappened
+  // in tool/index.template.html). lastResult is set when a 'result' message
+  // arrives from the plugin main thread, but studio.render() fully rebuilds
+  // the panel on EVERY store change (e.g. the user tweaking a token after
+  // Apply) — without this guard the "생성 N · 갱신 M · 실패 K" banner would
+  // keep describing a stale apply long after the config changed, violating
+  // heuristic #1 (state visibility must reflect current reality). Set true
+  // immediately before the render() call that follows a 'result' message;
+  // read once then reset to false at the top of renderApplySection(), which
+  // runs exactly once per Studio render (as rightColumnExtras) — so any
+  // render NOT caused by an apply result silently clears lastResult.
+  var resultJustHappened = false;
 
   function renderApplySection(cfg) {
+    if (!resultJustHappened) { lastResult = null; } else { resultJustHappened = false; }
     var el = studio.el;
     var checks = FM.GROUP_KEYS.map(function (g) {
       var id = 'sel-' + g;
@@ -1415,6 +1428,7 @@
     var msg = event.data && event.data.pluginMessage;
     if (!msg || msg.type !== 'result') return;
     lastResult = msg;
+    resultJustHappened = true;
     studio.render();
   };
 
