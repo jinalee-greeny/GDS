@@ -42,5 +42,13 @@ def main():
     write("plugin/ui.html", plugin_ui)
     print("wrote plugin/ui.html")
 
+    # --- figma plugin main thread ---
+    plugin_code = inject(read("plugin/code.src.js"), {
+        "/*__TOKEN_CORE__*/": token_core,
+        "/*__FIGMA_MAP__*/": figma_map,
+    })
+    write("plugin/code.js", plugin_code)
+    print("wrote plugin/code.js")
+
 if __name__ == "__main__":
     main()
