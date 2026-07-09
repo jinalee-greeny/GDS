@@ -20,9 +20,13 @@ def inject(template, replacements):
 
 def main():
     token_core = read("core/token-core.js").rstrip("\n")
+    studio_ui = read("core/studio-ui.js").rstrip("\n")
+    studio_css = read("core/studio.css").rstrip("\n")
     # --- web app ---
     web = inject(read("tool/index.template.html"), {
         "/*__TOKEN_CORE__*/": token_core,
+        "/*__STUDIO_UI__*/": studio_ui,
+        "/*__STUDIO_CSS__*/": studio_css,
     })
     write("tool/index.html", web)
     print("wrote tool/index.html")
