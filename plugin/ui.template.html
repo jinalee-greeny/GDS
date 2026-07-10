@@ -17,6 +17,7 @@
   gap: 4px 8px; margin-bottom: 10px;
 }
 .sel-row input[type="checkbox"] { margin: 0; }
+.cat-master { font-weight: 600; margin-bottom: 8px; }
 #cta-bar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 100;
   display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
@@ -133,18 +134,20 @@
     return CATEGORIES.map(function (cat) {
       var catId = 'cat-' + cat.name.replace(/[^a-zA-Z0-9]+/g, '-');
       var states = catLeafStates(cat);
+      // The master checkbox lives as the FIRST row of the category BODY, NOT
+      // inside <summary> — mirroring core/studio-ui.js's groupResetBtn, which
+      // was deliberately kept out of <summary> for its uncertain keyboard/AT
+      // behavior when interactive content sits on the disclosure toggle. In
+      // the body the master gets a proper <label for> (so a screen reader
+      // announces "<category> 전체, checkbox" instead of an unnamed box) and
+      // clicking the label toggles only the checkbox. <summary> then holds
+      // ONLY the plain, non-interactive category name, so clicking the name
+      // toggles the disclosure normally.
       var master = el('input', { type: 'checkbox', id: catId,
-        // A checkbox nested inside <summary> also sits on the native
-        // disclosure toggle's click path (same "competing action" issue
-        // documented above groupResetBtn()) — without stopping propagation,
-        // every click that checks/unchecks the master would ALSO
-        // expand/collapse the category. stopPropagation here keeps the
-        // click limited to the checkbox; the actual state change still
-        // happens on 'change' below.
-        onclick: function (e) { e.stopPropagation(); },
         onchange: function (e) { setCategory(cat, e.target.checked); studio.render(); } });
       master.checked = states.all;
       master.indeterminate = !states.all && !states.none;
+      var masterRow = el('label', { class: 'sel-row cat-master', for: catId }, [master, ' ' + cat.name + ' 전체']);
 
       var leaves = [];
 
@@ -198,7 +201,8 @@
       });
 
       return el('details', detailsAttrs(catId + '-details', true, 'group'), [
-        el('summary', { class: 'group-title sel-row' }, [master, ' ' + cat.name]),
+        el('summary', { class: 'group-title' }, [cat.name]),
+        masterRow,
         el('div', { class: 'sel-grid' }, leaves)
       ]);
     });
