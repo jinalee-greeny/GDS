@@ -51,9 +51,9 @@ function applyVariables(config, selection, acc) {
   }
 }
 
-function applyEffectStyles(config, acc) {
+async function applyEffectStyles(config, acc) {
   var plan = FigmaMap.effectStylePlan(config);
-  var existing = indexByName(figma.getLocalEffectStyles());
+  var existing = indexByName(await figma.getLocalEffectStylesAsync());
   for (var i = 0; i < plan.length; i++) {
     var item = plan[i];
     try {
@@ -67,7 +67,7 @@ function applyEffectStyles(config, acc) {
 
 async function applyTextStyles(config, textOptions, acc) {
   var plan = FigmaMap.textStylePlan(config, textOptions.weights, textOptions.family);
-  var existing = indexByName(figma.getLocalTextStyles());
+  var existing = indexByName(await figma.getLocalTextStylesAsync());
   for (var i = 0; i < plan.length; i++) {
     var item = plan[i];
     try {
@@ -90,7 +90,7 @@ async function applyPlan(config, selection, targets, textOptions) {
   var acc = { created: 0, updated: 0, failed: [] };
   targets = targets || { variables: true };
   if (targets.variables) applyVariables(config, selection, acc);
-  if (targets.effectStyles) applyEffectStyles(config, acc);
+  if (targets.effectStyles) await applyEffectStyles(config, acc);
   if (targets.textStyles) await applyTextStyles(config, textOptions || { weights: [], family: '' }, acc);
   return acc;
 }
