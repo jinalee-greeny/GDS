@@ -21,6 +21,17 @@ const FM = loadFigmaMap();
 // assert.deepEqual because figma-map is loaded in a separate vm realm; strict deepEqual fails
 // its cross-realm prototype identity check. Matches the pattern in tool/tests/core.test.mjs.
 // Expected literals are written in the impl's key order ({r,g,b}; {name,type,value}).
+
+test('GROUP_KEYS excludes shadow (shadow is Effect-Style-only)', () => {
+  assert.ok(!FM.GROUP_KEYS.includes('shadow'));
+  assert.equal(FM.GROUP_KEYS.length, 14);
+});
+
+test('variablesPlan emits no shadow/* entries', () => {
+  const plan = FM.variablesPlan(C.DEFAULT_CONFIG, FM.GROUP_KEYS.concat(['shadow']), C);
+  assert.ok(!plan.some(p => p.name.indexOf('shadow/') === 0));
+});
+
 test('hexToFigmaRGB converts hex to 0-1 floats', () => {
   assert.equal(JSON.stringify(FM.hexToFigmaRGB('#000000')), JSON.stringify({ r: 0, g: 0, b: 0 }));
   assert.equal(JSON.stringify(FM.hexToFigmaRGB('#FFFFFF')), JSON.stringify({ r: 1, g: 1, b: 1 }));

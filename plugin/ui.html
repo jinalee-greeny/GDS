@@ -191,13 +191,16 @@
   gap: 4px 8px; margin-bottom: 10px;
 }
 .sel-row input[type="checkbox"] { margin: 0; }
+.cat-master { font-weight: 600; margin-bottom: 8px; }
 #cta-bar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 100;
-  display: flex; align-items: center; gap: 12px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
   padding: 10px 16px; border-top: 1px solid #ddd; background: #fff;
 }
 #cta-bar .apply-btn { font-weight: 600; padding: 8px 16px; }
 #cta-bar .cta-result { font-size: 12px; color: #666; }
+.cta-fails { flex-basis: 100%; font-size: 11px; color: #b91c1c; max-height: 80px; overflow-y: auto; }
+.cta-fail { white-space: nowrap; }
 #app { padding-bottom: 64px; } /* room for the fixed bar */
 .sel-row, .wt-row { display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; }
 .font-input { width: 100%; box-sizing: border-box; margin-top: 6px; padding: 4px 6px; }
@@ -206,6 +209,7 @@
   .group { background: #232323; border-color: #3a3a3a; }
   #cta-bar { background: #232323; border-color: #3a3a3a; }
   #cta-bar .cta-result { color: #999; }
+  .cta-fails { color: #f87171; }
 }
 </style>
 <script id="token-core">
@@ -1321,11 +1325,11 @@
 
   var GROUP_KEYS = ['color','space','radius','borderWidth','fontSize','opacity',
     'lineHeight','zIndex','breakpoint','duration','fontFamily','fontWeight',
-    'letterSpacing','easing','shadow'];
+    'letterSpacing','easing'];
 
   var FLOAT_GROUPS = { space:1, radius:1, borderWidth:1, fontSize:1, opacity:1,
     lineHeight:1, zIndex:1, breakpoint:1, duration:1 };
-  var STRING_GROUPS = { fontFamily:1, fontWeight:1, letterSpacing:1, easing:1, shadow:1 };
+  var STRING_GROUPS = { fontFamily:1, fontWeight:1, letterSpacing:1, easing:1 };
 
   function toFloat(v) { return parseFloat(v); } // 'px'/'ms'/'0.4'/'1.25' -> number
 
@@ -1444,9 +1448,11 @@
 </script>
 <script>
 // ---- Plugin UI shell: wires core/studio-ui.js createStudio() to this page,
-// and owns the output-target section (Variables / Text Styles / Effect
-// Styles, plugin-shell-only UI supplied to createStudio() via
-// rightColumnExtras) plus the sticky bottom "Figma에 적용" CTA bar. Mirrors
+// and owns the output-target section (a 6-category tree — Color /
+// Typography / Spacing & Sizing / Effects / Motion / Layout — each with a
+// master checkbox rolling up its nested variable-group + style leaves;
+// plugin-shell-only UI supplied to createStudio() via rightColumnExtras)
+// plus the sticky bottom "Figma에 적용" CTA bar. Mirrors
 // tool/index.template.html's web shell, swapping the export/import panel
 // for the target-selection UI + an Apply button that postMessages to the
 // Figma plugin main thread (code.src.js). ----
@@ -1459,6 +1465,44 @@
   var targets = { variables: true, textStyles: false, effectStyles: false };
   var textWeights = ['regular']; // Text Styles: which weights to generate
   var fontFamily = 'Pretendard'; // Text Styles: font family for the text nodes
+
+  // ---- Output category taxonomy: groups the 14 FM.GROUP_KEYS variable
+  // groups + the 2 style kinds (text/effect) into 6 user-facing categories.
+  // Styles are folded INTO their category (Text Styles lives under
+  // Typography, Effect Styles under Effects) rather than getting their own
+  // top-level section, per Task 3.
+  var CATEGORIES = [
+    { name: 'Color', vars: ['color'], styles: [] },
+    { name: 'Typography', vars: ['fontSize','fontFamily','fontWeight','lineHeight','letterSpacing'], styles: ['text'] },
+    { name: 'Spacing & Sizing', vars: ['space','radius','borderWidth'], styles: [] },
+    { name: 'Effects', vars: ['opacity'], styles: ['effect'] },
+    { name: 'Motion', vars: ['duration','easing'], styles: [] },
+    { name: 'Layout', vars: ['zIndex','breakpoint'], styles: [] }
+  ];
+
+  // ---- Leaf state helpers: read/write the `selection` array (variable
+  // groups) and `targets.{textStyles,effectStyles}` (style kinds) that the
+  // Apply message is built from. Kept as free functions (not closed over a
+  // specific category) so both the leaf checkboxes AND the category-level
+  // master/catLeafStates helpers below can share them.
+  function varOn(g) { return selection.indexOf(g) >= 0; }
+  function setVar(g, on) {
+    var i = selection.indexOf(g);
+    if (on && i < 0) selection.push(g);
+    else if (!on && i >= 0) selection.splice(i, 1);
+  }
+  function styleOn(kind) { return kind === 'text' ? targets.textStyles : targets.effectStyles; }
+  function setStyle(kind, on) { if (kind === 'text') targets.textStyles = on; else targets.effectStyles = on; }
+  // catLeafStates: {all, none} across every leaf (vars + styles) in a
+  // category — drives the master checkbox's checked/indeterminate roll-up.
+  function catLeafStates(cat) {
+    var arr = cat.vars.map(varOn).concat(cat.styles.map(styleOn));
+    return { all: arr.every(Boolean), none: arr.every(function (x) { return !x; }) };
+  }
+  function setCategory(cat, on) {
+    cat.vars.forEach(function (g) { setVar(g, on); });
+    cat.styles.forEach(function (k) { setStyle(k, on); });
+  }
   // lastResult: the most recent {type:'result', created, updated, failed}
   // message from the plugin main thread, or null before any Apply. Unlike
   // the Variables-only prototype this replaces, lastResult is now rendered
@@ -1470,80 +1514,97 @@
   // change, so it can only ever show the last real apply result.
   var lastResult = null;
 
-  // rightColumnExtras(cfg): three output-target boxes appended to the LEFT
-  // panel column, in the same DOM slot the old Variables-range box used to
-  // occupy. Called by studio.render() on every store change, so it must
+  // rightColumnExtras(cfg): six collapsible output-CATEGORY groups appended
+  // to the LEFT panel column, in the same DOM slot the old flat
+  // Variables/Text-Styles/Effect-Styles boxes used to occupy. Each category
+  // folds its variable-group leaves AND any owned style kind (Text Styles
+  // under Typography, Effect Styles under Effects) under one master
+  // checkbox. Called by studio.render() on every store change, so it must
   // rebuild fresh nodes each time (same free-standing-checkbox pattern as
-  // the rest of this file: set `.checked`/`.value` as a DOM PROPERTY on the
-  // fresh node, never through el()'s attrs, since el() does setAttribute()
-  // for anything that isn't class/on*/text — setAttribute('checked',
-  // undefined) would stringify to "undefined" and force every box checked).
+  // the rest of this file: set `.checked`/`.indeterminate`/`.value` as a DOM
+  // PROPERTY on the fresh node, never through el()'s attrs, since el() does
+  // setAttribute() for anything that isn't class/on*/text — setAttribute(
+  // 'checked', undefined) would stringify to "undefined" and force every
+  // box checked).
   function renderOutputTargets(cfg) {
     var el = studio.el;
+    var detailsAttrs = studio.detailsAttrs;
 
-    // ---- 1. Variables ----
-    var varsEnableId = 'target-variables';
-    var varsEnable = el('input', { type: 'checkbox', id: varsEnableId,
-      onchange: function (e) { targets.variables = e.target.checked; } });
-    varsEnable.checked = targets.variables;
-    var checks = FM.GROUP_KEYS.map(function (g) {
-      var id = 'sel-' + g;
-      var cb = el('input', { type: 'checkbox', id: id,
-        onchange: function (e) {
-          var i = selection.indexOf(g);
-          if (e.target.checked && i < 0) selection.push(g);
-          else if (!e.target.checked && i >= 0) selection.splice(i, 1);
-        } });
-      cb.checked = selection.indexOf(g) >= 0;
-      return el('label', { class: 'sel-row', for: id }, [cb, ' ' + g]);
+    return CATEGORIES.map(function (cat) {
+      var catId = 'cat-' + cat.name.replace(/[^a-zA-Z0-9]+/g, '-');
+      var states = catLeafStates(cat);
+      // The master checkbox lives as the FIRST row of the category BODY, NOT
+      // inside <summary> — mirroring core/studio-ui.js's groupResetBtn, which
+      // was deliberately kept out of <summary> for its uncertain keyboard/AT
+      // behavior when interactive content sits on the disclosure toggle. In
+      // the body the master gets a proper <label for> (so a screen reader
+      // announces "<category> 전체, checkbox" instead of an unnamed box) and
+      // clicking the label toggles only the checkbox. <summary> then holds
+      // ONLY the plain, non-interactive category name, so clicking the name
+      // toggles the disclosure normally.
+      var master = el('input', { type: 'checkbox', id: catId,
+        onchange: function (e) { setCategory(cat, e.target.checked); studio.render(); } });
+      master.checked = states.all;
+      master.indeterminate = !states.all && !states.none;
+      var masterRow = el('label', { class: 'sel-row cat-master', for: catId }, [master, ' ' + cat.name + ' 전체']);
+
+      var leaves = [];
+
+      // ---- variable-group leaves ----
+      cat.vars.forEach(function (g) {
+        var id = 'leaf-var-' + g;
+        var cb = el('input', { type: 'checkbox', id: id,
+          onchange: function (e) { setVar(g, e.target.checked); studio.render(); } });
+        cb.checked = varOn(g);
+        leaves.push(el('label', { class: 'sel-row', for: id }, [cb, ' ' + g]));
+      });
+
+      // ---- style-kind leaves (folded into the owning category) ----
+      cat.styles.forEach(function (kind) {
+        var id = 'leaf-style-' + kind;
+        var labelText = kind === 'text' ? 'Text Styles' : 'Effect Styles';
+        var cb = el('input', { type: 'checkbox', id: id,
+          onchange: function (e) { setStyle(kind, e.target.checked); studio.render(); } });
+        cb.checked = styleOn(kind);
+        leaves.push(el('label', { class: 'sel-row', for: id }, [cb, ' ' + labelText]));
+
+        // Text Styles, when on, reveals weight checkboxes + the font-family
+        // input beneath it (same fields the old flat Text Styles box had).
+        if (kind === 'text' && styleOn('text')) {
+          var weightChecks = ['regular', 'medium', 'semibold', 'bold'].map(function (w) {
+            var wid = 'wt-' + w;
+            var wcb = el('input', { type: 'checkbox', id: wid,
+              onchange: function (e) {
+                var i = textWeights.indexOf(w);
+                if (e.target.checked && i < 0) textWeights.push(w);
+                else if (!e.target.checked && i >= 0) textWeights.splice(i, 1);
+              } });
+            wcb.checked = textWeights.indexOf(w) >= 0;
+            return el('label', { class: 'wt-row', for: wid }, [wcb, ' ' + w]);
+          });
+          // Stable id (not derived from any render-cycle counter) so the
+          // shared render()'s focus/caret-preservation-by-id (captureUIState/
+          // restoreUIState in core/studio-ui.js) can re-latch onto this exact
+          // input across a full #app rebuild — without it, typing here while
+          // any other store-driven re-render fires would drop focus/caret
+          // mid-word.
+          var fontInputId = 'plugin-font-family';
+          var fontLabel = el('label', { class: 'font-label', for: fontInputId, text: '폰트 패밀리' });
+          var fontInput = el('input', { type: 'text', id: fontInputId, class: 'font-input',
+            value: fontFamily, 'aria-label': '폰트 패밀리',
+            oninput: function (e) { fontFamily = e.target.value; } });
+          leaves.push(el('div', { class: 'sel-grid' }, weightChecks));
+          leaves.push(fontLabel);
+          leaves.push(fontInput);
+        }
+      });
+
+      return el('details', detailsAttrs(catId + '-details', true, 'group'), [
+        el('summary', { class: 'group-title' }, [cat.name]),
+        masterRow,
+        el('div', { class: 'sel-grid' }, leaves)
+      ]);
     });
-    var variablesGroup = el('div', { class: 'group' }, [
-      el('label', { class: 'group-title sel-row', for: varsEnableId }, [varsEnable, ' Figma Variables']),
-      el('div', { class: 'sel-grid' }, checks)
-    ]);
-
-    // ---- 2. Text Styles ----
-    var textEnableId = 'target-textStyles';
-    var textEnable = el('input', { type: 'checkbox', id: textEnableId,
-      onchange: function (e) { targets.textStyles = e.target.checked; } });
-    textEnable.checked = targets.textStyles;
-    var weightChecks = ['regular', 'medium', 'semibold', 'bold'].map(function (w) {
-      var id = 'wt-' + w;
-      var cb = el('input', { type: 'checkbox', id: id,
-        onchange: function (e) {
-          var i = textWeights.indexOf(w);
-          if (e.target.checked && i < 0) textWeights.push(w);
-          else if (!e.target.checked && i >= 0) textWeights.splice(i, 1);
-        } });
-      cb.checked = textWeights.indexOf(w) >= 0;
-      return el('label', { class: 'wt-row', for: id }, [cb, ' ' + w]);
-    });
-    // Stable id (not derived from any render-cycle counter) so the shared
-    // render()'s focus/caret-preservation-by-id (captureUIState/
-    // restoreUIState in core/studio-ui.js) can re-latch onto this exact
-    // input across a full #app rebuild — without it, typing here while any
-    // other store-driven re-render fires would drop focus/caret mid-word.
-    var fontInputId = 'plugin-font-family';
-    var fontLabel = el('label', { class: 'font-label', for: fontInputId, text: '폰트 패밀리' });
-    var fontInput = el('input', { type: 'text', id: fontInputId, class: 'font-input',
-      value: fontFamily, 'aria-label': '폰트 패밀리',
-      oninput: function (e) { fontFamily = e.target.value; } });
-    var textGroup = el('div', { class: 'group' }, [
-      el('label', { class: 'group-title sel-row', for: textEnableId }, [textEnable, ' Text Styles']),
-      el('div', { class: 'sel-grid' }, weightChecks),
-      fontLabel, fontInput
-    ]);
-
-    // ---- 3. Effect Styles ----
-    var fxEnableId = 'target-effectStyles';
-    var fxEnable = el('input', { type: 'checkbox', id: fxEnableId,
-      onchange: function (e) { targets.effectStyles = e.target.checked; } });
-    fxEnable.checked = targets.effectStyles;
-    var effectGroup = el('div', { class: 'group' }, [
-      el('label', { class: 'group-title sel-row', for: fxEnableId }, [fxEnable, ' Effect Styles'])
-    ]);
-
-    return [variablesGroup, textGroup, effectGroup];
   }
 
   // renderCTA(): (re)builds the ALWAYS-VISIBLE #cta-bar — a sibling of
@@ -1559,11 +1620,16 @@
     bar.innerHTML = '';
     var applyBtn = el('button', { class: 'apply-btn', text: 'Figma에 적용',
       onclick: function () {
+        // targets.variables is derived from `selection` HERE, at click time,
+        // rather than kept as its own toggle — the category tree no longer
+        // has a single "Figma Variables" master switch; each category's
+        // master rolls up its OWN vars+styles leaves, so "should we write
+        // variables at all" is simply "is anything selected".
         parent.postMessage({ pluginMessage: {
           type: 'apply',
           config: store.get(),
           selection: selection.slice(),
-          targets: { variables: targets.variables, textStyles: targets.textStyles, effectStyles: targets.effectStyles },
+          targets: { variables: selection.length > 0, textStyles: targets.textStyles, effectStyles: targets.effectStyles },
           textOptions: { weights: textWeights.slice(), family: fontFamily }
         } }, '*');
       } });
@@ -1571,10 +1637,17 @@
     if (lastResult) {
       var failed = lastResult.failed || [];
       resultText = '생성 ' + lastResult.created + ' · 갱신 ' + lastResult.updated + ' · 실패 ' + failed.length;
-      if (failed.length) resultText += ' (' + failed[0].name + ': ' + failed[0].error + ')';
     }
     bar.appendChild(applyBtn);
     bar.appendChild(el('span', { class: 'cta-result', text: resultText }));
+    if (lastResult && (lastResult.failed || []).length) {
+      var fails = el('div', { class: 'cta-fails' });
+      lastResult.failed.slice(0, 5).forEach(function (f) {
+        fails.appendChild(el('div', { class: 'cta-fail', text: f.name + ': ' + f.error }));
+      });
+      if (lastResult.failed.length > 5) fails.appendChild(el('div', { class: 'cta-fail', text: '…외 ' + (lastResult.failed.length - 5) + '건' }));
+      bar.appendChild(fails);
+    }
   }
 
   var studio = window.StudioUI.createStudio({

@@ -55,9 +55,9 @@ function loadApplyPlan(figmaMock) {
 //    (+ its returned variable's setValueForMode/remove), getVariableById. Created
 //    variables are tracked in `variablesById` so re-apply / removal can find them by id
 //    (via collection.variableIds) or by name (via indexVariables' own scan).
-//  - effect styles: getLocalEffectStyles/createEffectStyle, registry by id, name lookup
-//    via indexByName. Returned style objects expose {id,name,effects,remove()}.
-//  - text styles: getLocalTextStyles/createTextStyle, registry by id, same shape plus
+//  - effect styles: getLocalEffectStylesAsync/createEffectStyle, registry by id, name
+//    lookup via indexByName. Returned style objects expose {id,name,effects,remove()}.
+//  - text styles: getLocalTextStylesAsync/createTextStyle, registry by id, same shape plus
 //    {fontName,fontSize,lineHeight,letterSpacing}.
 //  - loadFontAsync(fontName): resolves normally; rejects when fontName.family matches
 //    the harness's configured `missingFamily` (tests the font-fail path in
@@ -104,7 +104,7 @@ function createFigmaMock(opts) {
       },
       getVariableById(id) { return variablesById[id] || null; }
     },
-    getLocalEffectStyles() { return Object.values(effectStylesById); },
+    getLocalEffectStylesAsync() { return Promise.resolve(Object.values(effectStylesById)); },
     createEffectStyle() {
       counter += 1;
       const id = 'effect-' + counter;
@@ -115,7 +115,7 @@ function createFigmaMock(opts) {
       effectStylesById[id] = s;
       return s;
     },
-    getLocalTextStyles() { return Object.values(textStylesById); },
+    getLocalTextStylesAsync() { return Promise.resolve(Object.values(textStylesById)); },
     createTextStyle() {
       counter += 1;
       const id = 'text-' + counter;

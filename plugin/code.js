@@ -291,11 +291,11 @@
 
   var GROUP_KEYS = ['color','space','radius','borderWidth','fontSize','opacity',
     'lineHeight','zIndex','breakpoint','duration','fontFamily','fontWeight',
-    'letterSpacing','easing','shadow'];
+    'letterSpacing','easing'];
 
   var FLOAT_GROUPS = { space:1, radius:1, borderWidth:1, fontSize:1, opacity:1,
     lineHeight:1, zIndex:1, breakpoint:1, duration:1 };
-  var STRING_GROUPS = { fontFamily:1, fontWeight:1, letterSpacing:1, easing:1, shadow:1 };
+  var STRING_GROUPS = { fontFamily:1, fontWeight:1, letterSpacing:1, easing:1 };
 
   function toFloat(v) { return parseFloat(v); } // 'px'/'ms'/'0.4'/'1.25' -> number
 
@@ -462,9 +462,9 @@ function applyVariables(config, selection, acc) {
   }
 }
 
-function applyEffectStyles(config, acc) {
+async function applyEffectStyles(config, acc) {
   var plan = FigmaMap.effectStylePlan(config);
-  var existing = indexByName(figma.getLocalEffectStyles());
+  var existing = indexByName(await figma.getLocalEffectStylesAsync());
   for (var i = 0; i < plan.length; i++) {
     var item = plan[i];
     try {
@@ -478,7 +478,7 @@ function applyEffectStyles(config, acc) {
 
 async function applyTextStyles(config, textOptions, acc) {
   var plan = FigmaMap.textStylePlan(config, textOptions.weights, textOptions.family);
-  var existing = indexByName(figma.getLocalTextStyles());
+  var existing = indexByName(await figma.getLocalTextStylesAsync());
   for (var i = 0; i < plan.length; i++) {
     var item = plan[i];
     try {
@@ -501,7 +501,7 @@ async function applyPlan(config, selection, targets, textOptions) {
   var acc = { created: 0, updated: 0, failed: [] };
   targets = targets || { variables: true };
   if (targets.variables) applyVariables(config, selection, acc);
-  if (targets.effectStyles) applyEffectStyles(config, acc);
+  if (targets.effectStyles) await applyEffectStyles(config, acc);
   if (targets.textStyles) await applyTextStyles(config, textOptions || { weights: [], family: '' }, acc);
   return acc;
 }
