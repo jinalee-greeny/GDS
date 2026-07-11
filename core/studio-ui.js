@@ -13,6 +13,9 @@
     var app = opts.appEl;
     var toolbarNode = opts.toolbarEl;
     var rightColumnExtras = opts.rightColumnExtras || function () { return null; };
+    var moduleExtras = opts.moduleExtras || function () { return null; };
+    var categoryHeaderExtras = opts.categoryHeaderExtras || function () { return null; };
+    var categoryBodyExtras = opts.categoryBodyExtras || function () { return null; };
 
   function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
   function getAtPath(obj, path) {
@@ -442,10 +445,53 @@
     ['letterSpacing', '자간(letterSpacing)', { placeholder: '예: 0.025em' }]
   ];
 
-  function renderListPanels() {
-    return KV_GROUPS.map(function (entry) {
-      return renderKVSection(entry[0], entry[1], entry[2]);
+  // ---- Category grouping ------------------------------------------------
+  // The flat editor modules (color, type scale, and the KV list groups) are
+  // organized into 6 user-facing categories, shared by both shells. Module
+  // <details> ids are unchanged, so open/close + focus + scroll preservation
+  // (captureUIState/restoreUIState) is unaffected — only the wrapping DOM and
+  // the module ORDER within the left column change. The plugin shell injects
+  // per-module and per-category export toggles via the three opt-in hooks
+  // (moduleExtras / categoryHeaderExtras / categoryBodyExtras); the web shell
+  // passes none, so it gets categorized editing with no export UI.
+  var CATEGORIES = [
+    { key: 'color', name: 'Color', modules: ['color'] },
+    { key: 'typography', name: 'Typography', modules: ['fontSize', 'fontFamily', 'fontWeight', 'lineHeight', 'letterSpacing'] },
+    { key: 'spacing', name: 'Spacing & Sizing', modules: ['space', 'radius', 'borderWidth'] },
+    { key: 'effects', name: 'Effects', modules: ['opacity', 'shadow'] },
+    { key: 'motion', name: 'Motion', modules: ['duration', 'easing'] },
+    { key: 'layout', name: 'Layout', modules: ['zIndex', 'breakpoint'] }
+  ];
+
+  // group key -> {label, opts} for the KV-backed modules (everything except
+  // 'color' and 'fontSize', which have bespoke renderers).
+  var KV_MAP = {};
+  KV_GROUPS.forEach(function (e) { KV_MAP[e[0]] = { label: e[1], opts: e[2] }; });
+
+  function renderModule(groupKey, cfg) {
+    if (groupKey === 'color') return renderColorPanel(cfg);
+    if (groupKey === 'fontSize') return renderTypePanel(cfg);
+    var entry = KV_MAP[groupKey];
+    return renderKVSection(groupKey, entry.label, entry.opts);
+  }
+
+  function renderCategory(cat, cfg) {
+    var headerExtra = categoryHeaderExtras(cat.key, cfg);
+    var headerChildren = (headerExtra ? [headerExtra] : [])
+      .concat([el('span', { class: 'category-title', text: cat.name })]);
+    var header = el('div', { class: 'category-header' }, headerChildren);
+
+    var moduleRows = cat.modules.map(function (groupKey) {
+      var extra = moduleExtras(groupKey, cfg);
+      var moduleNode = renderModule(groupKey, cfg);
+      var rowChildren = (extra ? [extra] : []).concat([moduleNode]);
+      return el('div', { class: 'module-row' }, rowChildren);
     });
+
+    var children = [header].concat(moduleRows);
+    var bodyExtra = categoryBodyExtras(cat.key, cfg);
+    if (bodyExtra) children.push(bodyExtra);
+    return el('section', { class: 'category' }, children);
   }
 
   // ---- Live preview panel (right column) --------------------------------
@@ -749,10 +795,8 @@
     var extras = rightColumnExtras(cfg);
     var extrasArr = extras == null ? [] : (Array.isArray(extras) ? extras : [extras]);
 
-    var leftCol = el('div', { class: 'panel-col', id: 'panel-col' }, [
-      renderColorPanel(cfg),
-      renderTypePanel(cfg)
-    ].concat(renderListPanels()).concat(extrasArr));
+    var leftCol = el('div', { class: 'panel-col', id: 'panel-col' },
+      CATEGORIES.map(function (cat) { return renderCategory(cat, cfg); }).concat(extrasArr));
 
     var rightCol = el('div', { class: 'preview-col', id: 'preview-col' }, [
       el('h2', { text: 'Preview' })
