@@ -33,6 +33,11 @@
   details > summary:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
   .group-reset-btn { display: inline-block; font-size: 11px; padding: 3px 8px; margin: 0 0 8px; }
   .group-body { padding: 4px 12px 12px; }
+  .category-header { display: flex; align-items: center; gap: 8px; margin: 20px 0 8px; }
+  .panel-col > .category:first-child .category-header { margin-top: 0; }
+  .category-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #666; }
+  .module-row { display: flex; align-items: flex-start; gap: 8px; }
+  .module-row > details { flex: 1 1 auto; min-width: 0; }
   .field-hint, .panel-hint { font-size: 11px; color: #666; margin: 0 0 6px; }
   .field-row .field-hint { margin: 0; flex-basis: 100%; }
   .hue-row { border-top: 1px solid #eee; padding: 10px 0; }
@@ -149,6 +154,7 @@
     .hue-row { border-top-color: #333; }
     .field-row label, .curve-cell label, .type-row label, .modular-scale label { color: #aaa; }
     .field-hint, .panel-hint { color: #999; }
+    .category-title { color: #999; }
     .dirty { background: #713f12; color: #fde68a; }
     .clean { color: #9ca3af; }
     button { background: #2c2c2c; border-color: #555; color: #eee; }
