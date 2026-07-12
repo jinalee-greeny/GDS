@@ -39,10 +39,21 @@
   .toolbar-title-group { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
   .toolbar-title-group h1 { margin: 0; }
   .toolbar-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-  #app {
+  #app { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+  .app-body {
     display: grid; grid-template-columns: minmax(320px, 1fr) minmax(320px, 1fr); grid-template-rows: 1fr;
     flex: 1 1 auto; min-height: 0;
   }
+  /* Edit|Preview tabs: hidden (both panes shown) on wide screens; the
+     max-width media query below reveals them and hides the inactive pane. */
+  .app-tabs { display: none; }
+  .app-tab {
+    font: inherit; cursor: pointer; background: transparent; border: none;
+    border-bottom: 2px solid transparent; border-radius: 0; padding: 6px 12px;
+    color: var(--muted); font-weight: 600;
+  }
+  .app-tab:hover { background: var(--hairline); }
+  .app-tab[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
   .panel-col {
     overflow-y: auto; height: 100%; padding: 16px; border-right: 1px solid var(--border);
   }
@@ -61,11 +72,33 @@
   details > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .group-reset-btn { display: inline-block; font-size: 11px; padding: 3px 8px; margin: 0 0 8px; }
   .group-body { padding: 4px 12px 12px; }
-  .category-header { display: flex; align-items: center; gap: 8px; margin: 20px 0 8px; }
-  .panel-col > .category:first-child .category-header { margin-top: 0; }
+  /* A category is a borderless collapsible <details> whose <summary> is the
+     header (custom chevron + uppercase title + optional export indicator).
+     Modules (bordered .group cards) live in .category-body. */
+  details.category { margin-bottom: 6px; background: transparent; }
+  summary.category-header {
+    display: flex; align-items: center; gap: 8px; list-style: none;
+    padding: 8px 10px; border-radius: 6px;
+  }
+  summary.category-header::-webkit-details-marker { display: none; }
+  summary.category-header::before {
+    content: '\25B8'; flex: 0 0 auto; font-size: 10px; color: var(--muted);
+    transition: transform .12s ease;
+  }
+  details.category[open] > summary.category-header::before { transform: rotate(90deg); }
   .category-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+  .category-body { padding: 2px 10px 10px; }
   .module-row { display: flex; align-items: flex-start; gap: 8px; }
   .module-row > details { flex: 1 1 auto; min-width: 0; }
+  /* Narrow (Figma plugin): single column with an Edit|Preview tab; only the
+     active pane shows. Wide screens ignore data-tab and show both. */
+  @media (max-width: 899px) {
+    .app-tabs { display: flex; gap: 6px; padding: 8px 16px 0; }
+    .app-body { grid-template-columns: 1fr; }
+    #app[data-tab="edit"] .preview-col { display: none; }
+    #app[data-tab="preview"] .panel-col { display: none; }
+    .panel-col { border-right: none; }
+  }
   .field-hint, .panel-hint { font-size: 11px; color: var(--muted); margin: 0 0 6px; }
   .field-row .field-hint { margin: 0; flex-basis: 100%; }
   .hue-row { border-top: 1px solid var(--hairline); padding: 10px 0; }
@@ -226,8 +259,10 @@
 #app { padding-bottom: 64px; } /* room for the fixed bar */
 .sel-row, .wt-row { display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; }
 .export-toggle { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; color: #555; white-space: nowrap; padding-top: 10px; cursor: pointer; }
-.export-master { display: inline-flex; align-items: center; }
-.export-textstyles { margin: 6px 0 12px; padding: 8px 10px; border: 1px dashed #ccc; border-radius: 6px; }
+.export-ind { margin-left: auto; font-size: 11px; line-height: 1; color: var(--accent); }
+.export-ind-off { color: var(--muted-2); }
+.cat-master { font-weight: 600; margin-bottom: 8px; }
+.export-textstyles { margin: 6px 0 12px; padding: 8px 10px; border: 1px dashed var(--border-strong); border-radius: 6px; }
 .font-input { width: 100%; box-sizing: border-box; margin-top: 6px; padding: 4px 6px; }
 .font-label { display: block; font-size: 12px; margin-top: 8px; }
 @media (prefers-color-scheme: dark) {
@@ -538,6 +573,7 @@
     var rightColumnExtras = opts.rightColumnExtras || function () { return null; };
     var moduleExtras = opts.moduleExtras || function () { return null; };
     var categoryHeaderExtras = opts.categoryHeaderExtras || function () { return null; };
+    var categoryBodyTop = opts.categoryBodyTop || function () { return null; };
     var categoryBodyExtras = opts.categoryBodyExtras || function () { return null; };
 
   function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
@@ -998,11 +1034,20 @@
     return renderKVSection(groupKey, entry.label, entry.opts);
   }
 
+  // A category is now itself a collapsible <details> (default closed), whose
+  // <summary> is the category header and whose body holds the module
+  // <details> (2-level nesting). Open/close persistence works unchanged:
+  // captureUIState scans document.querySelectorAll('details[id]') globally, so
+  // the category <details id="cat-*"> is captured/restored alongside the
+  // module <details> inside it. categoryHeaderExtras feeds the summary and
+  // MUST be non-interactive (no interactive content in <summary> — see the
+  // groupResetBtn precedent); categoryBodyTop is the first body row (the
+  // plugin's interactive category master lives here, not in the summary).
   function renderCategory(cat, cfg) {
     var headerExtra = categoryHeaderExtras(cat.key, cfg);
-    var headerChildren = (headerExtra ? [headerExtra] : [])
-      .concat([el('span', { class: 'category-title', text: cat.name })]);
-    var header = el('div', { class: 'category-header' }, headerChildren);
+    var summaryChildren = [el('span', { class: 'category-title', text: cat.name })]
+      .concat(headerExtra ? [headerExtra] : []);
+    var summary = el('summary', { class: 'category-header' }, summaryChildren);
 
     var moduleRows = cat.modules.map(function (groupKey) {
       var extra = moduleExtras(groupKey, cfg);
@@ -1011,10 +1056,43 @@
       return el('div', { class: 'module-row' }, rowChildren);
     });
 
-    var children = [header].concat(moduleRows);
+    var bodyTop = categoryBodyTop(cat.key, cfg);
     var bodyExtra = categoryBodyExtras(cat.key, cfg);
-    if (bodyExtra) children.push(bodyExtra);
-    return el('section', { class: 'category' }, children);
+    var bodyChildren = (bodyTop ? [bodyTop] : []).concat(moduleRows);
+    if (bodyExtra) bodyChildren.push(bodyExtra);
+    var body = el('div', { class: 'category-body' }, bodyChildren);
+
+    return el('details', detailsAttrs('cat-' + cat.key, false, 'category'), [summary, body]);
+  }
+
+  // ---- Responsive Edit | Preview tab bar (narrow viewports only) ---------
+  // On wide screens both columns show side-by-side and .app-tabs is CSS-
+  // hidden. On narrow screens (plugin) only the active pane shows and this
+  // segmented control switches between them. activeTab persists across the
+  // full-rebuild render() the same way detailsOpenState does; switching tabs
+  // is a pure view toggle (no store write), so it updates #app's data-tab and
+  // the buttons' aria-selected in place rather than triggering a re-render.
+  var activeTab = 'edit'; // 'edit' | 'preview'
+  function setActiveTab(id) {
+    activeTab = id;
+    var a = document.getElementById('app');
+    if (a) a.setAttribute('data-tab', id);
+    var tabs = document.querySelectorAll('.app-tab');
+    for (var i = 0; i < tabs.length; i++) {
+      tabs[i].setAttribute('aria-selected', tabs[i].getAttribute('data-tab') === id ? 'true' : 'false');
+    }
+  }
+  function renderAppTabs() {
+    function tab(id, label) {
+      return el('button', {
+        type: 'button', class: 'app-tab', role: 'tab', 'data-tab': id,
+        'aria-selected': activeTab === id ? 'true' : 'false',
+        text: label,
+        onclick: function () { setActiveTab(id); }
+      });
+    }
+    return el('div', { class: 'app-tabs', role: 'tablist', 'aria-label': 'Edit / Preview' },
+      [tab('edit', 'Edit'), tab('preview', 'Preview')]);
   }
 
   // ---- Live preview panel (right column) --------------------------------
@@ -1325,8 +1403,15 @@
       el('h2', { text: 'Preview' })
     ].concat(renderPreview(cfg), [renderContrastPanel(cfg)]));
 
-    app.appendChild(leftCol);
-    app.appendChild(rightCol);
+    // #app is a flex column: a tab bar (shown only on narrow viewports via
+    // CSS) over an .app-body grid that holds the two columns. data-tab drives
+    // which column shows when narrow; when wide, CSS ignores it and shows
+    // both. activeTab is re-applied here so a full rebuild keeps the current
+    // pane selected.
+    var appBody = el('div', { class: 'app-body' }, [leftCol, rightCol]);
+    app.appendChild(renderAppTabs());
+    app.appendChild(appBody);
+    app.setAttribute('data-tab', activeTab);
 
     restoreUIState(uiState);
   }
@@ -1609,22 +1694,39 @@
     return el('label', { class: 'export-toggle', for: id, title: 'Export as Variable' }, [cb, ' Var']);
   }
 
-  // categoryHeaderExtras: the category master toggle in the category header.
-  // Checked when all exportable items are on, indeterminate when some are;
-  // toggling sets every item in the category. Given an aria-label (the header
-  // title span beside it is a sibling, not a <label>, so the checkbox needs
-  // its own accessible name).
+  // categoryHeaderExtras: a NON-interactive export-state indicator shown in
+  // the category <summary> (so the export state is visible even when the
+  // category is collapsed). Interactive content must not live in <summary>
+  // (groupResetBtn precedent), so the actual master checkbox is rendered by
+  // categoryBodyTop below. Glyph: all=● (full), partial=◐ (half), none=○
+  // (empty). aria-hidden because categoryBodyTop's labelled checkbox already
+  // conveys the same state to assistive tech.
   function categoryHeaderExtras(catKey) {
+    var el = studio.el;
+    var spec = CAT_EXPORT[catKey];
+    if (!spec) return null;
+    var states = catStates(spec);
+    var glyph = states.all ? '●' : (states.none ? '○' : '◐');
+    var cls = 'export-ind' + (states.none ? ' export-ind-off' : '');
+    return el('span', { class: cls, 'aria-hidden': 'true', title: 'Export: ' + (states.all ? 'all' : (states.none ? 'none' : 'partial')) }, [glyph]);
+  }
+
+  // categoryBodyTop: the interactive category master checkbox, rendered as the
+  // FIRST row of the category body (not the summary). Checked when all
+  // exportable items are on, indeterminate when some are; toggling sets every
+  // item in the category. .checked/.indeterminate are DOM properties on the
+  // fresh node (never el() attrs — the force-checked bug).
+  function categoryBodyTop(catKey) {
     var el = studio.el;
     var spec = CAT_EXPORT[catKey];
     if (!spec) return null;
     var id = 'ex-cat-' + catKey;
     var states = catStates(spec);
-    var master = el('input', { type: 'checkbox', id: id, 'aria-label': 'Export all ' + spec.name,
+    var master = el('input', { type: 'checkbox', id: id,
       onchange: function (e) { setCategoryExport(spec, e.target.checked); studio.render(); } });
     master.checked = states.all;
     master.indeterminate = !states.all && !states.none;
-    return el('label', { class: 'export-master', for: id, title: 'Export all ' + spec.name }, [master]);
+    return el('label', { class: 'sel-row cat-master', for: id }, [master, ' Export all ' + spec.name]);
   }
 
   // categoryBodyExtras: only Typography gets one — the composite Text Styles
@@ -1714,6 +1816,7 @@
     toolbarEl: document.getElementById('toolbar'),
     moduleExtras: moduleExtras,
     categoryHeaderExtras: categoryHeaderExtras,
+    categoryBodyTop: categoryBodyTop,
     categoryBodyExtras: categoryBodyExtras
   });
 

@@ -15,6 +15,7 @@
     var rightColumnExtras = opts.rightColumnExtras || function () { return null; };
     var moduleExtras = opts.moduleExtras || function () { return null; };
     var categoryHeaderExtras = opts.categoryHeaderExtras || function () { return null; };
+    var categoryBodyTop = opts.categoryBodyTop || function () { return null; };
     var categoryBodyExtras = opts.categoryBodyExtras || function () { return null; };
 
   function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
@@ -475,11 +476,20 @@
     return renderKVSection(groupKey, entry.label, entry.opts);
   }
 
+  // A category is now itself a collapsible <details> (default closed), whose
+  // <summary> is the category header and whose body holds the module
+  // <details> (2-level nesting). Open/close persistence works unchanged:
+  // captureUIState scans document.querySelectorAll('details[id]') globally, so
+  // the category <details id="cat-*"> is captured/restored alongside the
+  // module <details> inside it. categoryHeaderExtras feeds the summary and
+  // MUST be non-interactive (no interactive content in <summary> — see the
+  // groupResetBtn precedent); categoryBodyTop is the first body row (the
+  // plugin's interactive category master lives here, not in the summary).
   function renderCategory(cat, cfg) {
     var headerExtra = categoryHeaderExtras(cat.key, cfg);
-    var headerChildren = (headerExtra ? [headerExtra] : [])
-      .concat([el('span', { class: 'category-title', text: cat.name })]);
-    var header = el('div', { class: 'category-header' }, headerChildren);
+    var summaryChildren = [el('span', { class: 'category-title', text: cat.name })]
+      .concat(headerExtra ? [headerExtra] : []);
+    var summary = el('summary', { class: 'category-header' }, summaryChildren);
 
     var moduleRows = cat.modules.map(function (groupKey) {
       var extra = moduleExtras(groupKey, cfg);
@@ -488,10 +498,43 @@
       return el('div', { class: 'module-row' }, rowChildren);
     });
 
-    var children = [header].concat(moduleRows);
+    var bodyTop = categoryBodyTop(cat.key, cfg);
     var bodyExtra = categoryBodyExtras(cat.key, cfg);
-    if (bodyExtra) children.push(bodyExtra);
-    return el('section', { class: 'category' }, children);
+    var bodyChildren = (bodyTop ? [bodyTop] : []).concat(moduleRows);
+    if (bodyExtra) bodyChildren.push(bodyExtra);
+    var body = el('div', { class: 'category-body' }, bodyChildren);
+
+    return el('details', detailsAttrs('cat-' + cat.key, false, 'category'), [summary, body]);
+  }
+
+  // ---- Responsive Edit | Preview tab bar (narrow viewports only) ---------
+  // On wide screens both columns show side-by-side and .app-tabs is CSS-
+  // hidden. On narrow screens (plugin) only the active pane shows and this
+  // segmented control switches between them. activeTab persists across the
+  // full-rebuild render() the same way detailsOpenState does; switching tabs
+  // is a pure view toggle (no store write), so it updates #app's data-tab and
+  // the buttons' aria-selected in place rather than triggering a re-render.
+  var activeTab = 'edit'; // 'edit' | 'preview'
+  function setActiveTab(id) {
+    activeTab = id;
+    var a = document.getElementById('app');
+    if (a) a.setAttribute('data-tab', id);
+    var tabs = document.querySelectorAll('.app-tab');
+    for (var i = 0; i < tabs.length; i++) {
+      tabs[i].setAttribute('aria-selected', tabs[i].getAttribute('data-tab') === id ? 'true' : 'false');
+    }
+  }
+  function renderAppTabs() {
+    function tab(id, label) {
+      return el('button', {
+        type: 'button', class: 'app-tab', role: 'tab', 'data-tab': id,
+        'aria-selected': activeTab === id ? 'true' : 'false',
+        text: label,
+        onclick: function () { setActiveTab(id); }
+      });
+    }
+    return el('div', { class: 'app-tabs', role: 'tablist', 'aria-label': 'Edit / Preview' },
+      [tab('edit', 'Edit'), tab('preview', 'Preview')]);
   }
 
   // ---- Live preview panel (right column) --------------------------------
@@ -802,8 +845,15 @@
       el('h2', { text: 'Preview' })
     ].concat(renderPreview(cfg), [renderContrastPanel(cfg)]));
 
-    app.appendChild(leftCol);
-    app.appendChild(rightCol);
+    // #app is a flex column: a tab bar (shown only on narrow viewports via
+    // CSS) over an .app-body grid that holds the two columns. data-tab drives
+    // which column shows when narrow; when wide, CSS ignores it and shows
+    // both. activeTab is re-applied here so a full rebuild keeps the current
+    // pane selected.
+    var appBody = el('div', { class: 'app-body' }, [leftCol, rightCol]);
+    app.appendChild(renderAppTabs());
+    app.appendChild(appBody);
+    app.setAttribute('data-tab', activeTab);
 
     restoreUIState(uiState);
   }

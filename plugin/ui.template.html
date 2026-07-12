@@ -21,8 +21,10 @@
 #app { padding-bottom: 64px; } /* room for the fixed bar */
 .sel-row, .wt-row { display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; }
 .export-toggle { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; color: #555; white-space: nowrap; padding-top: 10px; cursor: pointer; }
-.export-master { display: inline-flex; align-items: center; }
-.export-textstyles { margin: 6px 0 12px; padding: 8px 10px; border: 1px dashed #ccc; border-radius: 6px; }
+.export-ind { margin-left: auto; font-size: 11px; line-height: 1; color: var(--accent); }
+.export-ind-off { color: var(--muted-2); }
+.cat-master { font-weight: 600; margin-bottom: 8px; }
+.export-textstyles { margin: 6px 0 12px; padding: 8px 10px; border: 1px dashed var(--border-strong); border-radius: 6px; }
 .font-input { width: 100%; box-sizing: border-box; margin-top: 6px; padding: 4px 6px; }
 .font-label { display: block; font-size: 12px; margin-top: 8px; }
 @media (prefers-color-scheme: dark) {
@@ -135,22 +137,39 @@
     return el('label', { class: 'export-toggle', for: id, title: 'Export as Variable' }, [cb, ' Var']);
   }
 
-  // categoryHeaderExtras: the category master toggle in the category header.
-  // Checked when all exportable items are on, indeterminate when some are;
-  // toggling sets every item in the category. Given an aria-label (the header
-  // title span beside it is a sibling, not a <label>, so the checkbox needs
-  // its own accessible name).
+  // categoryHeaderExtras: a NON-interactive export-state indicator shown in
+  // the category <summary> (so the export state is visible even when the
+  // category is collapsed). Interactive content must not live in <summary>
+  // (groupResetBtn precedent), so the actual master checkbox is rendered by
+  // categoryBodyTop below. Glyph: all=● (full), partial=◐ (half), none=○
+  // (empty). aria-hidden because categoryBodyTop's labelled checkbox already
+  // conveys the same state to assistive tech.
   function categoryHeaderExtras(catKey) {
+    var el = studio.el;
+    var spec = CAT_EXPORT[catKey];
+    if (!spec) return null;
+    var states = catStates(spec);
+    var glyph = states.all ? '●' : (states.none ? '○' : '◐');
+    var cls = 'export-ind' + (states.none ? ' export-ind-off' : '');
+    return el('span', { class: cls, 'aria-hidden': 'true', title: 'Export: ' + (states.all ? 'all' : (states.none ? 'none' : 'partial')) }, [glyph]);
+  }
+
+  // categoryBodyTop: the interactive category master checkbox, rendered as the
+  // FIRST row of the category body (not the summary). Checked when all
+  // exportable items are on, indeterminate when some are; toggling sets every
+  // item in the category. .checked/.indeterminate are DOM properties on the
+  // fresh node (never el() attrs — the force-checked bug).
+  function categoryBodyTop(catKey) {
     var el = studio.el;
     var spec = CAT_EXPORT[catKey];
     if (!spec) return null;
     var id = 'ex-cat-' + catKey;
     var states = catStates(spec);
-    var master = el('input', { type: 'checkbox', id: id, 'aria-label': 'Export all ' + spec.name,
+    var master = el('input', { type: 'checkbox', id: id,
       onchange: function (e) { setCategoryExport(spec, e.target.checked); studio.render(); } });
     master.checked = states.all;
     master.indeterminate = !states.all && !states.none;
-    return el('label', { class: 'export-master', for: id, title: 'Export all ' + spec.name }, [master]);
+    return el('label', { class: 'sel-row cat-master', for: id }, [master, ' Export all ' + spec.name]);
   }
 
   // categoryBodyExtras: only Typography gets one — the composite Text Styles
@@ -240,6 +259,7 @@
     toolbarEl: document.getElementById('toolbar'),
     moduleExtras: moduleExtras,
     categoryHeaderExtras: categoryHeaderExtras,
+    categoryBodyTop: categoryBodyTop,
     categoryBodyExtras: categoryBodyExtras
   });
 
