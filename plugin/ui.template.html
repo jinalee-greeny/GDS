@@ -49,8 +49,8 @@
 // Layout) via three hooks — moduleExtras (per-module Var/Effect toggle),
 // categoryHeaderExtras (per-category master toggle, all/some/none), and
 // categoryBodyExtras (the composite Text Styles item under Typography) —
-// rather than a separate output panel, plus the sticky bottom "Figma에
-// 적용" CTA bar. Mirrors tool/index.template.html's web shell, swapping the
+// rather than a separate output panel, plus the sticky bottom "Apply to
+// Figma" CTA bar. Mirrors tool/index.template.html's web shell, swapping the
 // export/import panel for these inline toggles + an Apply button that
 // postMessages to the Figma plugin main thread (code.src.js). ----
 (function () {
@@ -122,17 +122,17 @@
     var el = studio.el;
     if (groupKey === 'shadow') {
       var sid = 'ex-shadow';
-      var scb = el('input', { type: 'checkbox', id: sid, 'aria-label': 'shadow를 Effect Style로 내보내기',
+      var scb = el('input', { type: 'checkbox', id: sid, 'aria-label': 'Export shadow as Effect Style',
         onchange: function (e) { targets.effectStyles = e.target.checked; studio.render(); } });
       scb.checked = targets.effectStyles;
-      return el('label', { class: 'export-toggle', for: sid, title: 'Effect Style로 내보내기' }, [scb, ' Effect']);
+      return el('label', { class: 'export-toggle', for: sid, title: 'Export as Effect Style' }, [scb, ' Effect']);
     }
     if (FM.GROUP_KEYS.indexOf(groupKey) < 0) return null; // not a variable group
     var id = 'ex-var-' + groupKey;
-    var cb = el('input', { type: 'checkbox', id: id, 'aria-label': groupKey + '를 Variable로 내보내기',
+    var cb = el('input', { type: 'checkbox', id: id, 'aria-label': 'Export ' + groupKey + ' as Variable',
       onchange: function (e) { setVar(groupKey, e.target.checked); studio.render(); } });
     cb.checked = varOn(groupKey);
-    return el('label', { class: 'export-toggle', for: id, title: 'Variable로 내보내기' }, [cb, ' Var']);
+    return el('label', { class: 'export-toggle', for: id, title: 'Export as Variable' }, [cb, ' Var']);
   }
 
   // categoryHeaderExtras: the category master toggle in the category header.
@@ -146,11 +146,11 @@
     if (!spec) return null;
     var id = 'ex-cat-' + catKey;
     var states = catStates(spec);
-    var master = el('input', { type: 'checkbox', id: id, 'aria-label': spec.name + ' 전체 내보내기',
+    var master = el('input', { type: 'checkbox', id: id, 'aria-label': 'Export all ' + spec.name,
       onchange: function (e) { setCategoryExport(spec, e.target.checked); studio.render(); } });
     master.checked = states.all;
     master.indeterminate = !states.all && !states.none;
-    return el('label', { class: 'export-master', for: id, title: spec.name + ' 전체 내보내기' }, [master]);
+    return el('label', { class: 'export-master', for: id, title: 'Export all ' + spec.name }, [master]);
   }
 
   // categoryBodyExtras: only Typography gets one — the composite Text Styles
@@ -180,9 +180,9 @@
         return el('label', { class: 'wt-row', for: wid }, [wcb, ' ' + w]);
       });
       var fontInputId = 'plugin-font-family';
-      var fontLabel = el('label', { class: 'font-label', for: fontInputId, text: '폰트 패밀리' });
+      var fontLabel = el('label', { class: 'font-label', for: fontInputId, text: 'Font family' });
       var fontInput = el('input', { type: 'text', id: fontInputId, class: 'font-input',
-        value: fontFamily, 'aria-label': '폰트 패밀리',
+        value: fontFamily, 'aria-label': 'Font family',
         oninput: function (e) { fontFamily = e.target.value; } });
       children.push(el('div', { class: 'sel-grid' }, weightChecks));
       children.push(fontLabel);
@@ -202,7 +202,7 @@
     var el = studio.el;
     var bar = document.getElementById('cta-bar');
     bar.innerHTML = '';
-    var applyBtn = el('button', { class: 'apply-btn', text: 'Figma에 적용',
+    var applyBtn = el('button', { class: 'apply-btn', text: 'Apply to Figma',
       onclick: function () {
         // targets.variables is derived from `selection` HERE, at click time,
         // rather than kept as its own toggle — the category tree no longer
@@ -220,7 +220,7 @@
     var resultText = '';
     if (lastResult) {
       var failed = lastResult.failed || [];
-      resultText = '생성 ' + lastResult.created + ' · 갱신 ' + lastResult.updated + ' · 실패 ' + failed.length;
+      resultText = 'Created ' + lastResult.created + ' · Updated ' + lastResult.updated + ' · Failed ' + failed.length;
     }
     bar.appendChild(applyBtn);
     bar.appendChild(el('span', { class: 'cta-result', text: resultText }));
@@ -229,7 +229,7 @@
       lastResult.failed.slice(0, 5).forEach(function (f) {
         fails.appendChild(el('div', { class: 'cta-fail', text: f.name + ': ' + f.error }));
       });
-      if (lastResult.failed.length > 5) fails.appendChild(el('div', { class: 'cta-fail', text: '…외 ' + (lastResult.failed.length - 5) + '건' }));
+      if (lastResult.failed.length > 5) fails.appendChild(el('div', { class: 'cta-fail', text: '…+' + (lastResult.failed.length - 5) + ' more' }));
       bar.appendChild(fails);
     }
   }
