@@ -89,6 +89,9 @@
   details.category[open] > summary.category-header::before { transform: rotate(90deg); }
   .category-title { font-size: 15px; font-weight: 650; letter-spacing: -0.01em; color: var(--text); }
   .category-body { padding: 4px 12px 12px; }
+  /* Export = output section, not a 7th editing category: same disclosure
+     language, set off by a hairline above (web shell only). */
+  details.category.category-export { border-top: 1px solid var(--hairline); margin-top: 4px; padding-top: 10px; }
   .module-row { display: flex; align-items: flex-start; gap: 8px; }
   .module-row > details { flex: 1 1 auto; min-width: 0; }
   /* Narrow (Figma plugin): single column with an Edit|Preview tab; only the

@@ -95,6 +95,9 @@
   details.category[open] > summary.category-header::before { transform: rotate(90deg); }
   .category-title { font-size: 15px; font-weight: 650; letter-spacing: -0.01em; color: var(--text); }
   .category-body { padding: 4px 12px 12px; }
+  /* Export = output section, not a 7th editing category: same disclosure
+     language, set off by a hairline above (web shell only). */
+  details.category.category-export { border-top: 1px solid var(--hairline); margin-top: 4px; padding-top: 10px; }
   .module-row { display: flex; align-items: flex-start; gap: 8px; }
   .module-row > details { flex: 1 1 auto; min-width: 0; }
   /* Narrow (Figma plugin): single column with an Edit|Preview tab; only the
@@ -1715,9 +1718,13 @@
       statusEl.style.color = importStatus.ok ? '#166534' : '#b91c1c';
     }
 
-    return el('details', detailsAttrs('grp-export', false, 'group'), [
-      el('summary', { text: 'Export' }),
-      el('div', { class: 'group-body kv-group-body' }, rows.concat([allRow, importRow, noteEl, statusEl]))
+    // Rendered in the same borderless category-disclosure language as the six
+    // editing categories (Color/Type/...) so the left panel reads as one clean
+    // list; the `category-export` modifier adds a hairline above to mark it as
+    // the output section rather than a 7th editing category.
+    return el('details', detailsAttrs('grp-export', false, 'category category-export'), [
+      el('summary', { class: 'category-header' }, [el('span', { class: 'category-title', text: 'Export' })]),
+      el('div', { class: 'category-body kv-group-body' }, rows.concat([allRow, importRow, noteEl, statusEl]))
     ]);
   }
 
