@@ -114,15 +114,15 @@
     // alongside it is redundant.
     var msg = el('span', { class: 'kv-msg', role: 'status' });
     var copyBtn = el('button', {
-      type: 'button', text: '복사',
+      type: 'button', text: 'Copy',
       onclick: function () { copyExportText(text, pre, msg); }
     });
     var downloadBtn = el('button', {
-      type: 'button', text: '다운로드',
+      type: 'button', text: 'Download',
       onclick: function () { download(spec.filename, text, spec.mime); }
     });
     var previewId = 'grp-export-preview-' + spec.key;
-    var details = el('details', detailsAttrs(previewId, false), [el('summary', { text: '미리보기' }), pre]);
+    var details = el('details', detailsAttrs(previewId, false), [el('summary', { text: 'Preview' }), pre]);
     return el('div', { class: 'kv-row' }, [
       el('span', { class: 'export-filename', text: spec.label }),
       copyBtn, downloadBtn, msg, details
@@ -227,7 +227,7 @@
 
     var rows = EXPORT_SPECS.map(function (spec) { return renderExportArtifactRow(cfg, spec); });
     var allBtn = el('button', {
-      type: 'button', text: '전체 다운로드',
+      type: 'button', text: 'Download all',
       onclick: function () { downloadAllExports(store.get()); }
     });
     var allRow = el('div', { class: 'export-all-row' }, [allBtn]);
@@ -268,7 +268,7 @@
         reader.readAsText(file);
       }
     });
-    var fileLabel = el('label', { for: 'ctl-import-file', text: 'tokens.json 불러오기: ' });
+    var fileLabel = el('label', { for: 'ctl-import-file', text: 'Load tokens.json: ' });
     var importRow = el('div', { class: 'kv-row import-row' }, [fileLabel, fileInput]);
 
     var noteEl = el('p', {
@@ -283,7 +283,7 @@
     }
 
     return el('details', detailsAttrs('grp-export', false, 'group'), [
-      el('summary', { text: '내보내기(Export)' }),
+      el('summary', { text: 'Export' }),
       el('div', { class: 'group-body kv-group-body' }, rows.concat([allRow, importRow, noteEl, statusEl]))
     ]);
   }

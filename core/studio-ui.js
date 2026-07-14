@@ -15,6 +15,7 @@
     var rightColumnExtras = opts.rightColumnExtras || function () { return null; };
     var moduleExtras = opts.moduleExtras || function () { return null; };
     var categoryHeaderExtras = opts.categoryHeaderExtras || function () { return null; };
+    var categoryBodyTop = opts.categoryBodyTop || function () { return null; };
     var categoryBodyExtras = opts.categoryBodyExtras || function () { return null; };
 
   function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
@@ -70,8 +71,8 @@
   // summary's event path.
   function groupResetBtn(labelText, groupKey) {
     return el('button', {
-      type: 'button', class: 'group-reset-btn', text: '초기화',
-      'aria-label': labelText + ' 그룹 기본값으로 초기화',
+      type: 'button', class: 'group-reset-btn', text: 'Reset',
+      'aria-label': labelText + ' group: reset to defaults',
       onclick: function () {
         if (window.confirm(labelText + ' 그룹을 기본값으로 되돌릴까요? (실행 취소로 복구 가능)')) {
           store.resetGroup(groupKey);
@@ -344,7 +345,7 @@
       // once the user leaves the field keeps the guard from fighting typing.
       var keyInput = el('input', {
         type: 'text', id: keyId, class: 'kv-key', value: key,
-        'aria-label': labelText + ' 키 ' + (i + 1),
+        'aria-label': labelText + ' key ' + (i + 1),
         onkeydown: function (e) { if (e.key === 'Enter') e.target.blur(); },
         onchange: function (e) {
           var newKey = e.target.value;
@@ -372,14 +373,14 @@
 
       var valInput = el('input', {
         type: 'text', id: valId, class: 'kv-val', value: group[key], placeholder: placeholder,
-        'aria-label': labelText + ' 값 (' + key + ')',
+        'aria-label': labelText + ' value (' + key + ')',
         oninput: function (e) {
           store.setPath([groupKey, key], e.target.value);
         }
       });
 
       var removeBtn = el('button', {
-        type: 'button', text: '삭제', 'aria-label': labelText + ' 항목 삭제: ' + key,
+        type: 'button', text: 'Delete', 'aria-label': 'Delete ' + labelText + ' item: ' + key,
         onclick: function () {
           var liveGroup = store.get()[groupKey];
           var next = {};
@@ -397,7 +398,7 @@
     });
 
     var addBtn = el('button', {
-      type: 'button', class: 'kv-add-row', text: '행 추가',
+      type: 'button', class: 'kv-add-row', text: 'Add row',
       onclick: function () {
         var liveGroup = store.get()[groupKey];
         var liveKeys = Object.keys(liveGroup);
@@ -430,19 +431,19 @@
   }
 
   var KV_GROUPS = [
-    ['space', '간격(space)', { placeholder: '예: 16px' }],
-    ['radius', '모서리(radius)', { placeholder: '예: 8px' }],
-    ['borderWidth', '테두리 두께(borderWidth)', { placeholder: '예: 2px' }],
-    ['opacity', '불투명도(opacity)', { placeholder: '예: 0.5' }],
-    ['shadow', '그림자(shadow)', { placeholder: '예: 0 2px 6px rgba(0,0,0,.1)' }],
-    ['zIndex', '쌓임 순서(zIndex)', { placeholder: '예: 1000' }],
-    ['breakpoint', '브레이크포인트(breakpoint)', { placeholder: '예: 768px' }],
-    ['duration', '지속시간(duration)', { placeholder: '예: 200ms' }],
-    ['easing', '이징(easing)', { placeholder: '예: cubic-bezier(0.4,0,0.2,1)' }],
-    ['fontFamily', '폰트 패밀리(fontFamily)', { placeholder: '예: Pretendard, sans-serif' }],
-    ['fontWeight', '폰트 굵기(fontWeight)', { placeholder: '예: 600' }],
-    ['lineHeight', '줄 높이(lineHeight)', { placeholder: '예: 1.5' }],
-    ['letterSpacing', '자간(letterSpacing)', { placeholder: '예: 0.025em' }]
+    ['space', 'Space', { placeholder: '예: 16px' }],
+    ['radius', 'Radius', { placeholder: '예: 8px' }],
+    ['borderWidth', 'Border width', { placeholder: '예: 2px' }],
+    ['opacity', 'Opacity', { placeholder: '예: 0.5' }],
+    ['shadow', 'Shadow', { placeholder: '예: 0 2px 6px rgba(0,0,0,.1)' }],
+    ['zIndex', 'Z-index', { placeholder: '예: 1000' }],
+    ['breakpoint', 'Breakpoint', { placeholder: '예: 768px' }],
+    ['duration', 'Duration', { placeholder: '예: 200ms' }],
+    ['easing', 'Easing', { placeholder: '예: cubic-bezier(0.4,0,0.2,1)' }],
+    ['fontFamily', 'Font family', { placeholder: '예: Pretendard, sans-serif' }],
+    ['fontWeight', 'Font weight', { placeholder: '예: 600' }],
+    ['lineHeight', 'Line height', { placeholder: '예: 1.5' }],
+    ['letterSpacing', 'Letter spacing', { placeholder: '예: 0.025em' }]
   ];
 
   // ---- Category grouping ------------------------------------------------
@@ -475,11 +476,20 @@
     return renderKVSection(groupKey, entry.label, entry.opts);
   }
 
+  // A category is now itself a collapsible <details> (default closed), whose
+  // <summary> is the category header and whose body holds the module
+  // <details> (2-level nesting). Open/close persistence works unchanged:
+  // captureUIState scans document.querySelectorAll('details[id]') globally, so
+  // the category <details id="cat-*"> is captured/restored alongside the
+  // module <details> inside it. categoryHeaderExtras feeds the summary and
+  // MUST be non-interactive (no interactive content in <summary> — see the
+  // groupResetBtn precedent); categoryBodyTop is the first body row (the
+  // plugin's interactive category master lives here, not in the summary).
   function renderCategory(cat, cfg) {
     var headerExtra = categoryHeaderExtras(cat.key, cfg);
-    var headerChildren = (headerExtra ? [headerExtra] : [])
-      .concat([el('span', { class: 'category-title', text: cat.name })]);
-    var header = el('div', { class: 'category-header' }, headerChildren);
+    var summaryChildren = [el('span', { class: 'category-title', text: cat.name })]
+      .concat(headerExtra ? [headerExtra] : []);
+    var summary = el('summary', { class: 'category-header' }, summaryChildren);
 
     var moduleRows = cat.modules.map(function (groupKey) {
       var extra = moduleExtras(groupKey, cfg);
@@ -488,10 +498,43 @@
       return el('div', { class: 'module-row' }, rowChildren);
     });
 
-    var children = [header].concat(moduleRows);
+    var bodyTop = categoryBodyTop(cat.key, cfg);
     var bodyExtra = categoryBodyExtras(cat.key, cfg);
-    if (bodyExtra) children.push(bodyExtra);
-    return el('section', { class: 'category' }, children);
+    var bodyChildren = (bodyTop ? [bodyTop] : []).concat(moduleRows);
+    if (bodyExtra) bodyChildren.push(bodyExtra);
+    var body = el('div', { class: 'category-body' }, bodyChildren);
+
+    return el('details', detailsAttrs('cat-' + cat.key, false, 'category'), [summary, body]);
+  }
+
+  // ---- Responsive Edit | Preview tab bar (narrow viewports only) ---------
+  // On wide screens both columns show side-by-side and .app-tabs is CSS-
+  // hidden. On narrow screens (plugin) only the active pane shows and this
+  // segmented control switches between them. activeTab persists across the
+  // full-rebuild render() the same way detailsOpenState does; switching tabs
+  // is a pure view toggle (no store write), so it updates #app's data-tab and
+  // the buttons' aria-selected in place rather than triggering a re-render.
+  var activeTab = 'edit'; // 'edit' | 'preview'
+  function setActiveTab(id) {
+    activeTab = id;
+    var a = document.getElementById('app');
+    if (a) a.setAttribute('data-tab', id);
+    var tabs = document.querySelectorAll('.app-tab');
+    for (var i = 0; i < tabs.length; i++) {
+      tabs[i].setAttribute('aria-selected', tabs[i].getAttribute('data-tab') === id ? 'true' : 'false');
+    }
+  }
+  function renderAppTabs() {
+    function tab(id, label) {
+      return el('button', {
+        type: 'button', class: 'app-tab', role: 'tab', 'data-tab': id,
+        'aria-selected': activeTab === id ? 'true' : 'false',
+        text: label,
+        onclick: function () { setActiveTab(id); }
+      });
+    }
+    return el('div', { class: 'app-tabs', role: 'tablist', 'aria-label': 'Edit / Preview' },
+      [tab('edit', 'Edit'), tab('preview', 'Preview')]);
   }
 
   // ---- Live preview panel (right column) --------------------------------
@@ -644,7 +687,7 @@
   function contrastStepBadge(stepStr) {
     var passed = stepStr !== '—'; // en-dash sentinel from contrastReport
     return el('span', { class: passed ? 'badge-pass' : 'badge-fail' },
-      [passed ? ('✓ 통과 (' + stepStr + ')') : '✕ 없음']);
+      [passed ? ('✓ Pass (' + stepStr + ')') : '✕ None']);
   }
 
   function contrastWarnRow(message) {
@@ -658,9 +701,9 @@
   function renderContrastPanel(cfg) {
     var report = C.contrastReport(cfg);
     var headerRow = el('tr', {}, [
-      el('th', { text: '팔레트' }),
-      el('th', { text: '흰 배경에 AA 통과 최소 step' }),
-      el('th', { text: '검은 배경에 AA 통과 최대 step' })
+      el('th', { text: 'Palette' }),
+      el('th', { text: 'Min AA-pass step on white' }),
+      el('th', { text: 'Max AA-pass step on black' })
     ]);
     var bodyRows = [];
     report.forEach(function (r) {
@@ -685,7 +728,7 @@
       el('tbody', {}, bodyRows)
     ]);
     return el('div', { class: 'pv-block' }, [
-      el('h3', { text: '접근성 검증 (WCAG AA 4.5:1)' }),
+      el('h3', { text: 'Accessibility (WCAG AA 4.5:1)' }),
       el('p', { class: 'pv-hint', text: '각 hue에서 흰 배경 대비 본문 텍스트로 안전한 최소 단계, 검은 배경(다크) 대비 최소 단계.' }),
       table
     ]);
@@ -696,26 +739,26 @@
   function renderToolbarContent() {
     var dirty = store.isDirty();
     var dirtyBadge = dirty
-      ? el('span', { class: 'dirty', id: 'toolbar-dirty', text: '● 변경됨(기본값과 다름)' })
-      : el('span', { class: 'clean', id: 'toolbar-dirty', text: '기본값' });
+      ? el('span', { class: 'dirty', id: 'toolbar-dirty', text: '● Modified' })
+      : el('span', { class: 'clean', id: 'toolbar-dirty', text: 'Default' });
     var titleGroup = el('div', { class: 'toolbar-title-group' }, [
       el('h1', { text: 'Foundations Token Studio' }),
       dirtyBadge
     ]);
 
     var undoAttrs = {
-      type: 'button', id: 'btn-undo', text: '되돌리기', 'aria-label': '되돌리기 (실행 취소, Ctrl/Cmd+Z)',
+      type: 'button', id: 'btn-undo', text: 'Undo', 'aria-label': 'Undo (Ctrl/Cmd+Z)',
       onclick: function () { store.undo(); }
     };
     if (!store.canUndo()) undoAttrs.disabled = 'disabled';
     var redoAttrs = {
-      type: 'button', id: 'btn-redo', text: '다시실행', 'aria-label': '다시실행 (Ctrl/Cmd+Shift+Z)',
+      type: 'button', id: 'btn-redo', text: 'Redo', 'aria-label': 'Redo (Ctrl/Cmd+Shift+Z)',
       onclick: function () { store.redo(); }
     };
     if (!store.canRedo()) redoAttrs.disabled = 'disabled';
     var resetAllBtn = el('button', {
-      type: 'button', id: 'btn-reset-all', text: '전체 초기화',
-      'aria-label': '모든 값을 기본값으로 전체 초기화',
+      type: 'button', id: 'btn-reset-all', text: 'Reset all',
+      'aria-label': 'Reset all values to defaults',
       onclick: function () {
         if (window.confirm('모든 값을 기본값으로 되돌릴까요? 이 작업은 "되돌리기"로 복구할 수 있습니다.')) {
           store.resetAll();
@@ -802,8 +845,15 @@
       el('h2', { text: 'Preview' })
     ].concat(renderPreview(cfg), [renderContrastPanel(cfg)]));
 
-    app.appendChild(leftCol);
-    app.appendChild(rightCol);
+    // #app is a flex column: a tab bar (shown only on narrow viewports via
+    // CSS) over an .app-body grid that holds the two columns. data-tab drives
+    // which column shows when narrow; when wide, CSS ignores it and shows
+    // both. activeTab is re-applied here so a full rebuild keeps the current
+    // pane selected.
+    var appBody = el('div', { class: 'app-body' }, [leftCol, rightCol]);
+    app.appendChild(renderAppTabs());
+    app.appendChild(appBody);
+    app.setAttribute('data-tab', activeTab);
 
     restoreUIState(uiState);
   }
