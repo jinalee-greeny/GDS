@@ -93,7 +93,7 @@
     return n;
   }
 
-  var FONT_SIZE_ORDER = ['2xs', 'xs', 'sm', 'md', 'lg', 'xl', '2xl', '3xl', '4xl', '5xl', '6xl'];
+  var FONT_SIZE_ORDER = ['xs', 'sm', 'md', 'lg', 'xl', '2xl', '3xl', '4xl', '5xl', '6xl'];
 
   // A color field = a labelled range slider + paired number input, both driving
   // the same palette key. During a slider DRAG we only repaint live (no store

@@ -125,11 +125,10 @@ module.exports = {
       },
       "fontFamily": {
         "sans": "Pretendard, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
-        "serif": "'Noto Serif KR', Georgia, 'Times New Roman', serif",
-        "mono": "'JetBrains Mono', SFMono-Regular, Menlo, Consolas, monospace"
+        "serif": "Pretendard, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+        "mono": "Pretendard, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
       },
       "fontSize": {
-        "2xs": "11px",
         "xs": "12px",
         "sm": "14px",
         "md": "16px",

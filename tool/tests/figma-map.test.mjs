@@ -113,8 +113,8 @@ test('effectStylePlan maps all shadow tokens in order', () => {
 
 test('textStylePlan builds size x weight styles with mapped font style names', () => {
   const plan = FM.textStylePlan(C.DEFAULT_CONFIG, ['regular','bold'], 'Pretendard');
-  // 11 sizes x 2 weights = 22
-  assert.equal(plan.length, 22);
+  // 10 sizes x 2 weights = 20
+  assert.equal(plan.length, 20);
   const mdBold = plan.find(p => p.name === 'text/md/bold');
   assert.equal(JSON.stringify(mdBold), JSON.stringify({
     name: 'text/md/bold',

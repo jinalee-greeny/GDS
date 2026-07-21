@@ -431,19 +431,15 @@
       "type": "fontFamilies"
     },
     "serif": {
-      "value": "'Noto Serif KR', Georgia, 'Times New Roman', serif",
+      "value": "Pretendard, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
       "type": "fontFamilies"
     },
     "mono": {
-      "value": "'JetBrains Mono', SFMono-Regular, Menlo, Consolas, monospace",
+      "value": "Pretendard, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
       "type": "fontFamilies"
     }
   },
   "fontSizes": {
-    "2xs": {
-      "value": "11px",
-      "type": "fontSizes"
-    },
     "xs": {
       "value": "12px",
       "type": "fontSizes"

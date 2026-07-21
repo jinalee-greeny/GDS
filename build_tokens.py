@@ -31,9 +31,9 @@ color_ramps={n:{str(s):hexof(L,Cpk*cm,H) for s,L,cm in zip(steps,Lc,Cm)} for n,(
 
 # ---------- foundation scales ----------
 font_family={"sans":"Pretendard, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
-             "serif":"'Noto Serif KR', Georgia, 'Times New Roman', serif",
-             "mono":"'JetBrains Mono', SFMono-Regular, Menlo, Consolas, monospace"}
-font_size={"2xs":"11px","xs":"12px","sm":"14px","md":"16px","lg":"18px","xl":"20px",
+             "serif":"Pretendard, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+             "mono":"Pretendard, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"}
+font_size={"xs":"12px","sm":"14px","md":"16px","lg":"18px","xl":"20px",
            "2xl":"24px","3xl":"30px","4xl":"36px","5xl":"48px","6xl":"60px"}
 font_weight={"regular":"400","medium":"500","semibold":"600","bold":"700"}
 line_height={"none":"1","tight":"1.25","snug":"1.375","normal":"1.5","relaxed":"1.625","loose":"2"}

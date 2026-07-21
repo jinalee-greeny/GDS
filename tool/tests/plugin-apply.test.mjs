@@ -277,7 +277,7 @@ test('apply with textStyles target loads fonts and creates styles', async () => 
   const { applyPlan } = makeHarness();
   const targets = { variables: false, textStyles: true, effectStyles: false };
   const r = await applyPlan(C.DEFAULT_CONFIG, [], targets, { weights: ['regular'], family: 'Pretendard' });
-  assert.equal(r.created, 11); // 11 sizes x 1 weight
+  assert.equal(r.created, 10); // 10 sizes x 1 weight
   assert.equal(r.failed.length, 0);
 });
 
@@ -286,7 +286,7 @@ test('text style with an unavailable font lands only in failed[], not counted', 
   const targets = { variables: false, textStyles: true, effectStyles: false };
   const r = await applyPlan(C.DEFAULT_CONFIG, [], targets, { weights: ['regular'], family: 'Pretendard' });
   assert.equal(r.created, 0);
-  assert.equal(r.failed.length, 11);
+  assert.equal(r.failed.length, 10);
   assert.ok(/Pretendard/.test(r.failed[0].error));
 });
 

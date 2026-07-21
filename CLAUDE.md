@@ -15,8 +15,8 @@
 
 ## 확정된 파운데이션 값
 - **Color**: OKLCH 기반 램프. gray + red·orange·amber·green·teal·blue·violet·pink, 각 50–950 + white/black.
-- **Font family**: sans=Pretendard, serif=Noto Serif KR, mono=JetBrains Mono (모두 교체 가능한 슬롯).
-- **Font size**: 2xs–6xl = 11/12/14/16/18/20/24/30/36/48/60px (정수 커브, "안 A").
+- **Font family**: sans/serif/mono 세 슬롯 모두 Pretendard (교체 가능한 슬롯).
+- **Font size**: xs–6xl = 12/14/16/18/20/24/30/36/48/60px (최소 12, base=md 16, 정수 커브).
 - **Font weight**: regular400 / medium500 / semibold600 / bold700.
 - **Line height**: none1 / tight1.25 / snug1.375 / normal1.5 / relaxed1.625 / loose2.
 - **Letter spacing**: tighter -0.05em ~ wider 0.05em.
@@ -30,23 +30,46 @@
 - **Motion**: duration fast100/base200/slow300/slower500(ms), easing standard/decelerate/accelerate/linear.
 
 ## 파일 구조
+저장소는 **① 토큰 파이프라인**과 **② Token Studio 앱(웹 + Figma 플러그인)** 두 갈래이며,
+각 갈래는 SSOT에서 산출물이 파생되는 구조. 생성물은 절대 직접 수정하지 않음.
+
+**① 토큰 파이프라인 (SSOT = `build_tokens.py` 내부 딕셔너리)**
 ```
-tokens/tokens.json        # SSOT (DTCG). 값 수정은 여기서만.
+tokens/tokens.json        # DTCG 토큰 (파생). 값 직접 수정 금지.
 build/tokens.css          # CSS 변수 (파생)
 build/tailwind.preset.js  # Tailwind preset (파생)
 build/tokens.figma.json   # Tokens Studio 단일 파일 포맷 (Figma 변수 import용, 파생)
-docs/GUIDE.md             # 가이드라인 + 검증 리포트
-docs/styleguide.html      # 리빙 스타일가이드
-build_tokens.py           # tokens.json + css + tailwind + figma json 생성기
+docs/GUIDE.md             # 가이드라인 + 검증 리포트 (파생)
+docs/styleguide.html      # 리빙 스타일가이드 (파생)
+build_tokens.py           # tokens.json + css + tailwind + figma json 생성기 (+ SSOT 데이터)
 build_docs.py             # GUIDE.md + styleguide.html + 검증 생성기
+```
+
+**② Token Studio 앱 (SSOT = `core/*` + `*.template.*`)**
+같은 에디터를 웹 앱과 Figma 플러그인 두 형태로 조립. 패널에서 토큰을 편집하고,
+Figma에서는 "Figma에 적용"으로 `Foundations` 컬렉션에 변수/Effect/Text 스타일 생성(재적용 시 중복 없이 갱신).
+```
+core/token-core.js        # 토큰 로직 코어 (앱 SSOT)
+core/studio-ui.js         # 에디터 UI 로직 (앱 SSOT)
+core/studio.css           # 에디터 스타일 (앱 SSOT)
+core/figma-map.js         # 토큰 → Figma 변수/스타일 매핑 (앱 SSOT)
+tool/index.template.html  # 웹 앱 템플릿 (SSOT)  → tool/index.html (파생, 수정 금지)
+plugin/ui.template.html   # 플러그인 UI 템플릿 (SSOT) → plugin/ui.html (파생, 수정 금지)
+plugin/code.src.js        # 플러그인 메인 소스 (SSOT) → plugin/code.js (파생, 수정 금지)
+plugin/manifest.json      # Figma 플러그인 매니페스트 ("Foundations Token Studio")
+plugin/README.md          # 플러그인 로드/사용/QA 가이드
+build_apps.py             # core/* + 템플릿을 조립해 웹앱·플러그인 생성물 빌드
+tool/tests/               # 파리티·드리프트·라운드트립 등 테스트 (node --test)
 ```
 
 ## 산출물 재생성 방법
 ```bash
-python3 build_tokens.py   # SSOT 데이터는 build_tokens.py 안의 딕셔너리에 정의됨
-python3 build_docs.py     # tokens.json을 읽어 문서/검증 생성
+python3 build_tokens.py   # ① SSOT 데이터는 build_tokens.py 안의 딕셔너리에 정의됨
+python3 build_docs.py     # ① tokens.json을 읽어 문서/검증 생성
+python3 build_apps.py     # ② core/* + 템플릿을 조립해 tool/index.html, plugin/code.js·ui.html 생성
 ```
-> 주의: 현재 SSOT 데이터는 `build_tokens.py` 내부 파이썬 딕셔너리에 있음. 값 변경 시 이 스크립트를 수정 후 재실행하면 tokens.json 이하 전부 갱신됨.
+> 주의 ①: 토큰 값 변경은 `build_tokens.py` 내부 딕셔너리에서만. 재실행하면 tokens.json 이하 전부 갱신.
+> 주의 ②: 앱 코드 변경은 `core/*`와 `*.template.*` / `code.src.js`에서만. `build_apps.py` 재실행하면 생성물 갱신. `tool/index.html`·`plugin/code.js`·`plugin/ui.html`은 손대지 않음.
 
 ## 검증 상태 (통과)
 - 참조 무결성: 원시값만, 깨진 참조 0건.

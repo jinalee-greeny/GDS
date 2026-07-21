@@ -25,8 +25,8 @@ tokens/tokens.json   ← 여기만 관리 (SSOT)
 | 카테고리 | 스케일 |
 |---|---|
 | Color | gray + red·orange·amber·green·teal·blue·violet·pink × 50–950, white/black |
-| Font family | sans(Pretendard) · serif(Noto Serif KR) · mono(JetBrains Mono) |
-| Font size | 2xs–6xl (11–60px, 정수 커브) |
+| Font family | sans · serif · mono 세 슬롯 모두 Pretendard |
+| Font size | xs–6xl (12–60px, 최소 12 · base 16, 정수 커브) |
 | Font weight | regular·medium·semibold·bold |
 | Line height | none–loose (1–2) |
 | Letter spacing | tighter–wider |
