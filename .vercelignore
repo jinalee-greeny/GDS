@@ -1,0 +1,14 @@
+# The deployed site is the self-contained tool/index.html (see vercel.json).
+# Everything below is source, build tooling, or non-web output not needed at
+# runtime — excluded to keep the deployment lean and avoid serving source.
+*.py
+core/
+plugin/
+tokens/
+build/
+docs/
+tool/tests/
+tool/index.template.html
+.superpowers/
+CLAUDE.md
+skills-lock.json
