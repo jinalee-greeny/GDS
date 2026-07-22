@@ -216,8 +216,29 @@
     return el('div', { class: 'step-row' }, [picker, nameInput, hexInput, del]);
   }
 
-  // One scale: name + delete, its step rows, and an add-step button.
+  // Collapsed scale = a compact mini ramp of its step values (over a checker so
+  // alpha reads), so the panel stays short and scannable; expand to edit steps.
+  function scaleMiniStrip(stepMap) {
+    return el('div', { class: 'scale-mini', role: 'img', 'aria-label': 'ramp preview' },
+      Object.keys(stepMap).map(function (s) { return el('div', { class: 'scale-mini-sw', style: 'background:' + stepMap[s] }); }));
+  }
+
+  // One scale: a collapsible block. Header = toggle + editable name + (collapsed)
+  // mini ramp + delete; expanded adds its step rows and an add-step button.
+  // Toggling swaps just this block in place (no global rebuild, no focus churn).
+  var scaleOpenState = {}; // scaleName -> bool (default collapsed)
   function renderScaleEditor(scaleName, stepMap) {
+    var open = !!scaleOpenState[scaleName];
+    var block;
+    var toggle = el('button', {
+      type: 'button', class: 'scale-toggle', 'aria-expanded': open ? 'true' : 'false',
+      'aria-label': (open ? 'Collapse ' : 'Expand ') + scaleName,
+      onclick: function () {
+        scaleOpenState[scaleName] = !scaleOpenState[scaleName];
+        var fresh = renderScaleEditor(scaleName, store.get().color.scales[scaleName] || {});
+        if (block.parentNode) block.parentNode.replaceChild(fresh, block);
+      }
+    });
     var nameInput = el('input', {
       type: 'text', class: 'scale-name', 'aria-label': 'Color scale name', value: scaleName,
       onchange: function (e) {
@@ -228,6 +249,7 @@
           c.order = c.order.map(function (x) { return x === scaleName ? un : x; });
           c.scales[un] = c.scales[scaleName];
           if (un !== scaleName) delete c.scales[scaleName];
+          scaleOpenState[un] = scaleOpenState[scaleName]; // carry open state across rename
         });
       }
     });
@@ -235,17 +257,24 @@
       type: 'button', class: 'kv-del-btn', 'aria-label': 'Delete color ' + scaleName,
       onclick: function () { updateColor(function (c) { c.order = c.order.filter(function (x) { return x !== scaleName; }); delete c.scales[scaleName]; }); }
     }, [icon('trash')]);
-    var stepRows = Object.keys(stepMap).map(function (step) { return renderStepRow(scaleName, step, stepMap[step]); });
-    var addStep = el('button', {
-      type: 'button', class: 'kv-add-row',
-      onclick: function () {
-        var k = uniqueKey(Object.keys(store.get().color.scales[scaleName]), 'new');
-        pendingFocusId = 'ctl-color-' + scaleName + '-' + k + '-name';
-        updateColor(function (c) { c.scales[scaleName][k] = '#000000'; });
-      }
-    }, iconLabel('plus', 'Add step'));
-    return el('div', { class: 'scale-block' },
-      [el('div', { class: 'scale-head' }, [nameInput, del])].concat(stepRows).concat([addStep]));
+    var headKids = [toggle, nameInput];
+    if (!open) headKids.push(scaleMiniStrip(stepMap));
+    headKids.push(del);
+    var children = [el('div', { class: 'scale-head' }, headKids)];
+    if (open) {
+      var stepRows = Object.keys(stepMap).map(function (step) { return renderStepRow(scaleName, step, stepMap[step]); });
+      var addStep = el('button', {
+        type: 'button', class: 'kv-add-row',
+        onclick: function () {
+          var k = uniqueKey(Object.keys(store.get().color.scales[scaleName]), 'new');
+          pendingFocusId = 'ctl-color-' + scaleName + '-' + k + '-name';
+          updateColor(function (c) { c.scales[scaleName][k] = '#000000'; });
+        }
+      }, iconLabel('plus', 'Add step'));
+      children = children.concat(stepRows).concat([addStep]);
+    }
+    block = el('div', { class: 'scale-block' + (open ? ' open' : '') }, children);
+    return block;
   }
 
   // Module bodies are split out (colorPanelBody/typePanelBody/kvSectionBody)
@@ -258,6 +287,7 @@
       type: 'button', class: 'kv-add-row scale-add',
       onclick: function () {
         var k = uniqueKey(store.get().color.order, 'color');
+        scaleOpenState[k] = true; // new scale opens ready to edit
         pendingFocusId = null;
         updateColor(function (c) { c.order.push(k); c.scales[k] = { '500': '#808080' }; });
       }
@@ -1040,6 +1070,47 @@
     return el('nav', { class: 'domain-nav', role: 'tablist', 'aria-label': 'Domain' }, btns);
   }
 
+  // Draggable splitter between preview (left) and settings (right). Width of
+  // the settings pane persists (localStorage + closure) so the ratio survives
+  // re-renders and reloads; the preview takes the rest (1fr).
+  var MIN_PANEL = 360, MIN_PREVIEW = 420, DIVIDER_W = 6;
+  var panelW = null; // px, null = CSS default (440)
+  function loadPanelW() {
+    if (panelW == null) { try { var v = localStorage.getItem('fts-panel-w'); if (v) panelW = parseInt(v, 10) || null; } catch (e) {} }
+    return panelW;
+  }
+  function clampPanelW(w, bodyW) { return Math.max(MIN_PANEL, Math.min(w, Math.max(MIN_PANEL, bodyW - DIVIDER_W - MIN_PREVIEW))); }
+  function setPanelW(w) {
+    panelW = w;
+    var body = document.getElementById('app-body');
+    if (body) body.style.setProperty('--panel-w', w + 'px');
+    try { localStorage.setItem('fts-panel-w', String(w)); } catch (e) {}
+  }
+  function renderDivider() {
+    var d = el('div', {
+      class: 'col-divider', role: 'separator', 'aria-orientation': 'vertical',
+      'aria-label': 'Resize preview and settings', tabindex: '0',
+      onkeydown: function (e) {
+        var body = document.getElementById('app-body'); if (!body) return;
+        var cur = parseInt(getComputedStyle(body).getPropertyValue('--panel-w'), 10) || 480;
+        if (e.key === 'ArrowLeft') { setPanelW(clampPanelW(cur + 16, body.getBoundingClientRect().width)); e.preventDefault(); }
+        else if (e.key === 'ArrowRight') { setPanelW(clampPanelW(cur - 16, body.getBoundingClientRect().width)); e.preventDefault(); }
+      }
+    });
+    d.addEventListener('pointerdown', function (e) {
+      var body = document.getElementById('app-body'); if (!body) return;
+      e.preventDefault();
+      var rect = body.getBoundingClientRect();
+      try { d.setPointerCapture(e.pointerId); } catch (er) {}
+      document.body.classList.add('col-resizing');
+      function move(ev) { setPanelW(clampPanelW(rect.right - ev.clientX - DIVIDER_W / 2, rect.width)); }
+      function up() { d.removeEventListener('pointermove', move); d.removeEventListener('pointerup', up); document.body.classList.remove('col-resizing'); }
+      d.addEventListener('pointermove', move);
+      d.addEventListener('pointerup', up);
+    });
+    return d;
+  }
+
   function renderMasterDetailBody(cfg, extrasArr) {
     app.appendChild(renderDomainNav());
     var domain = domainByKey(activeDomain) || DOMAINS[0];
@@ -1066,7 +1137,10 @@
     var settings = renderTabbedModules(categoryByKey(domain.category), cfg);
     var panelCol = el('div', { class: 'panel-col', id: 'panel-col' }, settings);
 
-    app.appendChild(el('div', { class: 'app-body' }, [previewCol, panelCol]));
+    var appBody = el('div', { class: 'app-body app-body-split', id: 'app-body' }, [previewCol, renderDivider(), panelCol]);
+    var w = loadPanelW();
+    if (w != null) appBody.style.setProperty('--panel-w', w + 'px');
+    app.appendChild(appBody);
   }
 
   function render() {
@@ -1119,7 +1193,9 @@
     // which column shows when narrow; when wide, CSS ignores it and shows
     // both. activeTab is re-applied here so a full rebuild keeps the current
     // pane selected.
-    var appBody = el('div', { class: 'app-body' }, [leftCol, rightCol]);
+    // preview-first DOM order (was relying on CSS `order`, which is now dropped
+    // so the master-detail splitter can sit between the two columns).
+    var appBody = el('div', { class: 'app-body' }, [rightCol, leftCol]);
     app.appendChild(renderAppTabs());
     app.appendChild(appBody);
     app.setAttribute('data-tab', activeTab);

@@ -44,16 +44,25 @@
   .toolbar-title-group h1 { margin: 0; }
   .toolbar-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   #app { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
-  /* Preview-first: the preview owns the wide left track (the thing you read),
-     controls collapse to a narrower right inspector (the thing you poke at
-     occasionally). order:1/2 flips them visually without touching DOM/id order
-     so the scroll-preservation and Edit|Preview tab logic keep working. */
+  /* Preview-first: preview owns the wide left track, settings the right. DOM is
+     built preview-first, so no `order` swap is needed (which also lets the
+     master-detail splitter live between the two columns). */
   .app-body {
     display: grid; grid-template-columns: 1fr minmax(360px, 440px); grid-template-rows: 1fr;
     flex: 1 1 auto; min-height: 0;
   }
-  .preview-col { order: 1; }
-  .panel-col { order: 2; }
+  /* Master-detail split: preview (1fr) | draggable divider | resizable settings.
+     --panel-w is set inline by the drag handle and persisted. */
+  .app-body-split { grid-template-columns: minmax(0, 1fr) 6px var(--panel-w, 480px); }
+  .col-divider { position: relative; cursor: col-resize; align-self: stretch; }
+  .col-divider::after {
+    content: ''; position: absolute; inset: 0 2px; border-radius: 2px;
+    background: transparent; transition: background-color .12s ease;
+  }
+  .col-divider:hover::after, .col-divider:focus-visible::after { background: var(--accent); }
+  .col-divider:focus-visible { outline: none; }
+  body.col-resizing { cursor: col-resize; user-select: none; }
+  body.col-resizing .preview-body, body.col-resizing .panel-col { pointer-events: none; }
   /* Edit|Preview tabs: hidden (both panes shown) on wide screens; the
      max-width media query below reveals them and hides the inactive pane. */
   .app-tabs { display: none; }
@@ -65,11 +74,11 @@
   .app-tab:hover { background: var(--hairline); }
   .app-tab[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
   .panel-col {
-    overflow-y: auto; height: 100%; padding: 24px 22px 40px; border-left: 1px solid var(--border);
+    overflow-y: auto; height: 100%; padding: 28px 28px 48px; border-left: 1px solid var(--border);
   }
   /* Wrapper: fixed nav header + scrollable body. It does NOT scroll itself. */
   .preview-col { display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; }
-  .preview-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 20px 22px 40px; }
+  .preview-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 28px 28px 48px; }
   h1 { font-size: 19px; margin: 0 0 12px; letter-spacing: -0.01em; }
   h2 { font-size: 17px; font-weight: 650; letter-spacing: -0.01em; margin: 0 0 14px; }
   /* Depth 2 (module): flat and contained — no card chrome, no shadow. It reads
@@ -103,7 +112,7 @@
      orphan floating above the content. Recede it to a muted ghost link so the
      editing controls, not the reset affordance, lead the eye. */
   .group-reset-btn {
-    display: inline-flex; align-items: center; gap: 4px; font-size: 12px; padding: 3px 7px; margin: 0 0 8px;
+    display: inline-flex; align-items: center; gap: 4px; font-size: 14px; padding: 3px 7px; margin: 0 0 8px;
     background: transparent; border: none; color: var(--muted-2); font-weight: 600;
   }
   .group-reset-btn:hover { background: var(--hairline); color: var(--text); }
@@ -127,36 +136,37 @@
   }
   /* Hairline between stacked modules inside one category card (accordion). */
   .category-body .module-row + .module-row { border-top: 1px solid var(--hairline); }
-  /* Tabs layout (web shell): a calm underline tab bar (not loud filled pills)
-     so a 5-module category reads as one tidy row, not a block of blue chips. */
+  /* Depth-2 module switcher: a segmented container (sunken track, raised active
+     segment) — contained, secondary to the depth-1 underline nav. */
   .mod-tabs {
-    display: flex; flex-wrap: wrap; gap: 0 4px; padding: 2px 6px 0; margin-bottom: 10px;
-    box-shadow: inset 0 -1px 0 var(--hairline);
+    display: inline-flex; flex-wrap: wrap; gap: 3px; padding: 3px; margin-bottom: 16px;
+    background: var(--surface-sunken); border-radius: 10px;
   }
   .mod-tab {
     border: none; background: transparent; color: var(--muted);
-    font-size: 12px; font-weight: 500; padding: 7px 7px 8px; border-radius: 0;
-    border-bottom: 2px solid transparent;
+    font-size: 14px; font-weight: 600; padding: 6px 12px; border-radius: 7px;
   }
   .mod-tab:hover { color: var(--text); }
-  .mod-tab[aria-selected="true"] { color: var(--text); font-weight: 600; border-bottom-color: var(--accent); }
+  .mod-tab[aria-selected="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(20, 24, 33, .08); }
   /* Master-detail (web shell): top domain selector; one domain's preview + its
      settings shown side by side below. */
+  /* Depth-1 domain selector: an underline tab bar (primary, top-level nav).
+     Tabs sit on the nav's bottom border; the active one gets an accent underline. */
   .domain-nav {
-    flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: 4px;
-    padding: 9px 16px; background: var(--bg); border-bottom: 1px solid var(--border);
+    flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end;
+    padding: 12px 20px 0; background: var(--bg); border-bottom: 1px solid var(--border);
   }
   .domain-tab {
     border: none; background: transparent; color: var(--muted);
-    font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 8px;
+    font-size: 15px; font-weight: 600; padding: 8px 6px 12px; border-radius: 0;
+    border-bottom: 2px solid transparent; margin-bottom: -1px; /* overlap nav border */
   }
-  .domain-tab:hover { background: var(--hairline); color: var(--text); }
-  .domain-tab[aria-selected="true"] { background: var(--accent); color: #fff; }
-  .domain-tab[aria-selected="true"]:hover { background: var(--accent); color: #fff; }
+  .domain-tab:hover { color: var(--text); }
+  .domain-tab[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
   .domain-tab-export { margin-left: auto; } /* push Export to the far end */
   .app-body-single { grid-template-columns: 1fr; }
   .a11y-block { max-width: 840px; }
-  .pv-kv-val { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .pv-kv-val { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
   .pv-sub-gap { height: 14px; }
   summary.category-header::-webkit-details-marker { display: none; }
   summary.category-header::before {
@@ -169,7 +179,7 @@
      treatment (uppercase, tracked eyebrow) ranks it clearly ABOVE the
      sentence-case module titles inside, and makes the collapsed left panel
      read as a tidy editorial table of contents. */
-  .category-title { font-size: 13px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text); }
+  .category-title { font-size: 15px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text); }
   .category-body { padding: 4px 12px 12px; }
   /* Export = output section, not a 7th editing category: same card language,
      set slightly apart with extra top margin (web shell only). */
@@ -180,33 +190,53 @@
      active pane shows. Wide screens ignore data-tab and show both. */
   @media (max-width: 899px) {
     .app-tabs { display: flex; gap: 6px; padding: 8px 16px 0; }
-    .app-body { grid-template-columns: 1fr; }
+    .app-body, .app-body-split { grid-template-columns: 1fr; }
+    .col-divider { display: none; } /* stack, no resize on narrow */
     #app[data-tab="edit"] .preview-col { display: none; }
     #app[data-tab="preview"] .panel-col { display: none; }
     .panel-col { border-left: none; }
   }
-  .panel-hint { font-size: 12px; color: var(--muted); margin: 0 0 6px; }
+  .panel-hint { font-size: 14px; color: var(--muted); margin: 0 0 6px; }
   .hue-row { border-top: 1px solid var(--hairline); padding: 12px 0; }
   .hue-row:first-child { border-top: none; padding-top: 4px; }
   /* Title + focus hint share one row. The hint fills the remaining width and
      truncates (never wraps), so showing/hiding it on focus can't change the
      row height — the controls below never shift. */
   .hue-title-row { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
-  .hue-title { flex: 0 0 auto; font-size: 13px; font-weight: 650; text-transform: capitalize; letter-spacing: -0.01em; }
-  .hue-hint { flex: 1 1 auto; min-width: 0; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hue-title { flex: 0 0 auto; font-size: 15px; font-weight: 650; text-transform: capitalize; letter-spacing: -0.01em; }
+  .hue-hint { flex: 1 1 auto; min-width: 0; font-size: 14px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .field-row { display: flex; align-items: center; gap: 10px; margin: 5px 0; flex-wrap: wrap; }
-  .field-row label { min-width: 40px; font-size: 12px; color: var(--muted); }
+  .field-row label { min-width: 40px; font-size: 14px; color: var(--muted); }
   .field-row input[type="range"] { flex: 1 1 120px; accent-color: var(--accent); }
   .field-row input[type="number"] { width: 78px; font-variant-numeric: tabular-nums; }
   .swatch-strip { display: flex; margin-top: 6px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
   .swatch { flex: 1; height: 30px; }
-  /* Manual color scale editor: a scale block (name + delete) over its step
-     rows (swatch picker + step name + hex), each freely editable. */
-  .scale-block { border-top: 1px solid var(--hairline); padding: 14px 0; }
-  .scale-block:first-child { border-top: none; padding-top: 4px; }
-  .scale-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  /* Manual color scale editor: each scale is a collapsible block. Collapsed =
+     one compact row (toggle + name + mini ramp + delete); expanded adds the
+     editable step rows, so the panel stays short with many scales. */
+  .scale-block { border-top: 1px solid var(--hairline); padding: 12px 0; }
+  .scale-block:first-child { border-top: none; }
+  .scale-block.open { padding: 16px 0 20px; }
+  .scale-head { display: flex; align-items: center; gap: 10px; }
+  .scale-block.open .scale-head { margin-bottom: 14px; }
+  .scale-toggle { flex: 0 0 auto; width: 22px; height: 22px; padding: 0; border: none; background: transparent; cursor: pointer; position: relative; }
+  .scale-toggle::before {
+    content: ''; position: absolute; inset: 0; margin: auto; width: 11px; height: 11px; background-color: var(--muted-2);
+    -webkit-mask: var(--caret) center / contain no-repeat; mask: var(--caret) center / contain no-repeat; transition: transform .15s ease;
+  }
+  .scale-toggle[aria-expanded="true"]::before { transform: rotate(90deg); }
+  .scale-toggle:hover::before { background-color: var(--text); }
   .scale-name { flex: 1 1 auto; min-width: 0; font-weight: 650; }
-  .step-row { display: flex; align-items: center; gap: 6px; margin: 5px 0; }
+  /* Collapsed mini ramp: shows the scale's colors at a glance, over a checker
+     so alpha reads. */
+  .scale-mini {
+    flex: 0 0 auto; display: flex; width: 132px; height: 18px; border-radius: 5px; overflow: hidden; border: 1px solid var(--border);
+    background-image: linear-gradient(45deg, #c8ccd2 25%, transparent 25%), linear-gradient(-45deg, #c8ccd2 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #c8ccd2 75%), linear-gradient(-45deg, transparent 75%, #c8ccd2 75%);
+    background-size: 8px 8px; background-position: 0 0, 0 4px, 4px -4px, -4px 0;
+  }
+  .scale-mini-sw { flex: 1; }
+  .step-row { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
   .step-picker {
     flex: 0 0 auto; width: 30px; height: 30px; padding: 0; cursor: pointer;
     border: 1px solid var(--border-strong); border-radius: 8px; background: none;
@@ -219,36 +249,36 @@
   .scale-add { margin-top: 12px; }
   .curve-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 6px; margin-top: 8px; }
   .curve-cell { display: flex; flex-direction: column; gap: 2px; }
-  .curve-cell label { font-size: 12px; color: var(--muted); }
+  .curve-cell label { font-size: 14px; color: var(--muted); }
   .curve-cell input { width: 100%; font-variant-numeric: tabular-nums; }
-  .type-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
-  .type-row label { min-width: 56px; font-size: 12px; color: var(--muted); }
+  .type-row { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
+  .type-row label { min-width: 56px; font-size: 14px; color: var(--muted); }
   .type-row input[type="number"] { width: 78px; font-variant-numeric: tabular-nums; }
   .modular-scale { display: flex; align-items: flex-end; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border-strong); flex-wrap: wrap; }
   .modular-scale .field { display: flex; flex-direction: column; gap: 2px; }
-  .modular-scale label { font-size: 12px; color: var(--muted); }
+  .modular-scale label { font-size: 14px; color: var(--muted); }
   .modular-scale input { width: 78px; font-variant-numeric: tabular-nums; }
   .kv-group-body { display: flex; flex-direction: column; gap: 6px; }
   .kv-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 4px 0; border-top: 1px solid var(--hairline); }
   .kv-row:first-child { border-top: none; }
-  .kv-row input[type="text"] { padding: 6px 10px; border: 1px solid var(--border-strong); border-radius: 8px; font: inherit; background: var(--surface); color: var(--text); }
+  .kv-row input[type="text"] { padding: 8px 12px; border: 1px solid var(--border-strong); border-radius: 8px; font: inherit; background: var(--surface); color: var(--text); }
   .kv-row .kv-del-btn { flex: 0 0 auto; padding: 6px 9px; color: var(--muted); }
   .kv-row .kv-del-btn:hover { color: var(--text); }
   .kv-row .kv-key { flex: 0 1 110px; min-width: 70px; }
   .kv-row .kv-val { flex: 1 1 160px; min-width: 100px; }
-  .kv-msg { flex-basis: 100%; font-size: 12px; color: #b91c1c; }
+  .kv-msg { flex-basis: 100%; font-size: 14px; color: #b91c1c; }
   .kv-add-row { margin-top: 4px; }
-  .pv-block { border: 1px solid var(--border); border-radius: var(--radius-card); margin-bottom: 16px; padding: 18px 20px; background: var(--surface); scroll-margin-top: 14px; }
+  .pv-block { border: 1px solid var(--border); border-radius: var(--radius-card); margin-bottom: 20px; padding: 24px; background: var(--surface); scroll-margin-top: 16px; }
   /* Fixed jump-nav header (not sticky-in-scroll; it's a flex sibling above the
      scrollable body, so it never scrolls away). */
   .pv-nav {
     flex: 0 0 auto;
-    display: flex; flex-wrap: wrap; gap: 4px;
-    padding: 11px 20px; background: var(--bg); border-bottom: 1px solid var(--border);
+    display: flex; flex-wrap: wrap; gap: 6px;
+    padding: 12px 20px; background: var(--bg); border-bottom: 1px solid var(--border);
   }
   .pv-nav-btn {
     border: none; background: transparent; color: var(--muted);
-    font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px;
+    font-size: 14px; font-weight: 600; padding: 4px 10px; border-radius: 999px;
   }
   .pv-nav-btn:hover { background: var(--hairline); color: var(--text); }
   /* Role groups: a labeled band over the member cards, hairline-separated so
@@ -256,11 +286,11 @@
   .pv-group { scroll-margin-top: 14px; }
   .pv-group + .pv-group { margin-top: 28px; }
   .pv-group-head { margin: 0 2px 12px; }
-  .pv-group-title { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: 0.03em; color: var(--muted); }
-  .pv-block h3 { font-size: 15px; font-weight: 650; letter-spacing: -0.01em; margin: 0 0 12px; text-transform: capitalize; }
-  .pv-hint { font-size: 12px; color: var(--muted); margin: 0 0 8px; }
-  .pv-color-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
-  .pv-color-label { min-width: 72px; font-size: 12px; text-transform: capitalize; color: var(--muted); }
+  .pv-group-title { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: 0.03em; color: var(--muted); }
+  .pv-block h3 { font-size: 15px; font-weight: 650; letter-spacing: -0.01em; margin: 0 0 16px; text-transform: capitalize; }
+  .pv-hint { font-size: 14px; color: var(--muted); margin: 0 0 12px; }
+  .pv-color-row { display: flex; align-items: center; gap: 12px; margin: 12px 0; }
+  .pv-color-label { min-width: 72px; font-size: 14px; text-transform: capitalize; color: var(--muted); }
   .pv-color-col { flex: 1; min-width: 0; }
   /* Checkerboard behind swatches so alpha colors (#RRGGBBAA) read as transparent;
      opaque swatches cover it fully, so solid ramps look unchanged. */
@@ -270,21 +300,21 @@
       linear-gradient(45deg, transparent 75%, #c8ccd2 75%), linear-gradient(-45deg, transparent 75%, #c8ccd2 75%);
     background-size: 12px 12px; background-position: 0 0, 0 6px, 6px -6px, -6px 0;
   }
-  .pv-color-swatch { flex: 1; height: 36px; }
-  .pv-color-caption-row { display: flex; margin-top: 2px; }
-  .pv-color-caption { flex: 1; font-size: 12px; text-align: center; color: var(--muted-2); font-variant-numeric: tabular-nums; }
-  .pv-type-row { display: flex; align-items: baseline; gap: 10px; margin: 6px 0; border-top: 1px solid var(--hairline); padding-top: 6px; }
+  .pv-color-swatch { flex: 1; height: 40px; }
+  .pv-color-caption-row { display: flex; margin-top: 6px; }
+  .pv-color-caption { flex: 1; font-size: 14px; text-align: center; color: var(--muted-2); font-variant-numeric: tabular-nums; }
+  .pv-type-row { display: flex; align-items: baseline; gap: 12px; margin: 10px 0; border-top: 1px solid var(--hairline); padding-top: 10px; }
   .pv-type-row:first-of-type { border-top: none; padding-top: 0; }
-  .pv-type-label { min-width: 72px; font-size: 12px; color: var(--muted); flex-shrink: 0; font-variant-numeric: tabular-nums; }
+  .pv-type-label { min-width: 72px; font-size: 14px; color: var(--muted); flex-shrink: 0; font-variant-numeric: tabular-nums; }
   /* Big samples (48/60px) must not spill past the card — truncate cleanly
      instead of hard-clipping mid-glyph with a scrollbar. */
   .pv-type-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1 1 auto; }
-  .pv-space-row { display: flex; align-items: center; gap: 8px; margin: 5px 0; }
-  .pv-space-label { min-width: 72px; font-size: 12px; color: var(--muted); flex-shrink: 0; font-variant-numeric: tabular-nums; }
+  .pv-space-row { display: flex; align-items: center; gap: 10px; margin: 8px 0; }
+  .pv-space-label { min-width: 72px; font-size: 14px; color: var(--muted); flex-shrink: 0; font-variant-numeric: tabular-nums; }
   .pv-space-bar { height: 14px; background: var(--accent); border-radius: 2px; min-width: 1px; }
-  .pv-flex-wrap { display: flex; flex-wrap: wrap; gap: 14px; }
+  .pv-flex-wrap { display: flex; flex-wrap: wrap; gap: 16px; }
   .pv-item { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-  .pv-item-label { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .pv-item-label { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
   .pv-radius-box { width: 44px; height: 44px; background: var(--accent); }
   .pv-border-box { width: 44px; height: 44px; background: var(--surface); border-color: var(--accent); }
   .pv-shadow-box { width: 44px; height: 44px; background: var(--surface); border-radius: 6px; }
@@ -295,7 +325,7 @@
   .pv-opacity-box { width: 44px; height: 44px; background: var(--accent); border-radius: 6px; }
   .pv-motion-row { margin: 8px 0; border-top: 1px solid var(--hairline); padding-top: 8px; }
   .pv-motion-row:first-of-type { border-top: none; padding-top: 0; }
-  .pv-motion-row-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  .pv-motion-row-label { font-size: 14px; color: var(--muted); margin-bottom: 6px; }
   .pv-motion-cells { display: flex; flex-wrap: wrap; gap: 16px; }
   .pv-motion-cell { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; width: 130px; overflow: hidden; }
   .pv-motion-box { width: 30px; height: 30px; border-radius: 6px; background: var(--accent); transform: translateX(0); }
@@ -303,11 +333,11 @@
   @media (prefers-reduced-motion: reduce) {
     .pv-motion-box { transition-duration: 0ms !important; }
   }
-  .export-filename { min-width: 160px; font-weight: 600; font-size: 12px; }
+  .export-filename { min-width: 160px; font-weight: 600; font-size: 14px; }
   .export-pre {
     flex-basis: 100%; white-space: pre-wrap; word-break: break-all; max-height: 240px;
     overflow: auto; background: var(--surface-sunken); border: 1px solid var(--border); border-radius: var(--radius-ctl);
-    padding: 12px 14px; font-size: 12px; margin: 8px 0 0;
+    padding: 12px 14px; font-size: 14px; margin: 8px 0 0;
     font-family: var(--font-mono); line-height: 1.55; font-variant-numeric: tabular-nums;
   }
   .export-all-row { padding: 8px 0; border-top: 1px solid var(--hairline); margin-top: 4px; }
@@ -315,7 +345,7 @@
   .import-note { margin: 4px 0 0; }
   button {
     font: inherit; cursor: pointer; border: 1px solid var(--btn-border); background: var(--btn-bg);
-    color: var(--text); border-radius: var(--radius-ctl); padding: 7px 14px;
+    color: var(--text); border-radius: var(--radius-ctl); padding: 9px 16px;
     display: inline-flex; align-items: center; gap: 6px;
     transition: background-color .13s ease, border-color .13s ease, transform .04s ease;
   }
@@ -326,7 +356,7 @@
   /* Unified input box: number + text share one style (number inputs used to
      fall back to the browser default). Spinners removed so both read alike. */
   input[type="text"], input[type="number"] {
-    font: inherit; padding: 6px 10px; border: 1px solid var(--border-strong);
+    font: inherit; padding: 8px 12px; border: 1px solid var(--border-strong);
     border-radius: 8px; background: var(--surface); color: var(--text);
   }
   input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
@@ -336,26 +366,26 @@
     outline: 2px solid var(--accent); outline-offset: 2px;
   }
   .dirty {
-    display: inline-block; padding: 1px 6px; font-size: 12px;
+    display: inline-block; padding: 1px 6px; font-size: 14px;
     border-radius: 999px; background: #fde68a; color: #713f12; font-weight: 600;
   }
   .clean {
-    display: inline-block; padding: 1px 6px; font-size: 12px;
+    display: inline-block; padding: 1px 6px; font-size: 14px;
     border-radius: 999px; color: var(--muted); font-weight: 600;
   }
   .badge-pass, .badge-fail {
     display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px;
-    font-size: 12px; font-weight: 600;
+    font-size: 14px; font-weight: 600;
   }
   .badge-pass { background: #dcfce7; color: #14532d; }
   .badge-fail { background: #fee2e2; color: #7f1d1d; }
-  .contrast-table { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+  .contrast-table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
   .contrast-table th, .contrast-table td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--hairline); }
   .contrast-table th { font-weight: 600; color: var(--muted); }
   .contrast-hue-cell { text-transform: capitalize; font-weight: 600; }
   .contrast-warn-row td { padding: 6px; }
   .contrast-warn { display: flex; align-items: flex-start; gap: 6px; padding: 6px 8px; border-radius: 4px;
-    background: #fee2e2; color: #7f1d1d; font-size: 12px; }
+    background: #fee2e2; color: #7f1d1d; font-size: 14px; }
   @media (prefers-color-scheme: dark) {
     /* Dark theme = palette override only. Structural rules above consume the
        variables, so the light/dark split lives in one place per token. */
