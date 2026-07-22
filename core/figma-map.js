@@ -2,11 +2,13 @@
   'use strict';
 
   function hexToFigmaRGB(hex) {
-    return {
+    var out = {
       r: parseInt(hex.slice(1, 3), 16) / 255,
       g: parseInt(hex.slice(3, 5), 16) / 255,
       b: parseInt(hex.slice(5, 7), 16) / 255
     };
+    if (hex.length === 9) out.a = parseInt(hex.slice(7, 9), 16) / 255; // #RRGGBBAA
+    return out;
   }
 
   var GROUP_KEYS = ['color','space','radius','borderWidth','fontSize','opacity',
@@ -25,14 +27,16 @@
     var out = [];
     if (sel.color) {
       var ramps = C.buildAllRamps(config);
-      config.color.order.forEach(function (hue) {
-        config.steps.forEach(function (step) {
-          out.push({ name: 'color/' + hue + '/' + step, type: 'COLOR',
-            value: hexToFigmaRGB(ramps[hue][step]) });
-        });
+      config.color.order.forEach(function (name) {
+        var ramp = ramps[name], keys = Object.keys(ramp);
+        if (keys.length === 1) {
+          out.push({ name: 'color/' + name, type: 'COLOR', value: hexToFigmaRGB(ramp[keys[0]]) });
+        } else {
+          keys.forEach(function (step) {
+            out.push({ name: 'color/' + name + '/' + step, type: 'COLOR', value: hexToFigmaRGB(ramp[step]) });
+          });
+        }
       });
-      out.push({ name: 'color/base/white', type: 'COLOR', value: hexToFigmaRGB(config.color.base.white) });
-      out.push({ name: 'color/base/black', type: 'COLOR', value: hexToFigmaRGB(config.color.base.black) });
     }
     GROUP_KEYS.forEach(function (g) {
       if (g === 'color' || !sel[g]) return;

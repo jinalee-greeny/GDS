@@ -62,12 +62,11 @@ tokens/tokens.json   ← 여기만 관리 (SSOT)
 
 | 팔레트 | 흰 배경에 AA 통과 최소 step | 검은 배경에 AA 통과 최대 step |
 |---|---|---|
+| black | base | — |
+| white | — | base |
+| black-alpha | 5 | — |
+| white-alpha | — | 80 |
 | gray | 600 | 500 |
 | red | 600 | 500 |
-| orange | 600 | 500 |
-| amber | 600 | 500 |
-| green | 700 | 600 |
-| teal | 700 | 600 |
 | blue | 600 | 500 |
-| violet | 600 | 500 |
-| pink | 600 | 500 |
+| green | 700 | 600 |

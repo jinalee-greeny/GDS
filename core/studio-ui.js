@@ -156,121 +156,96 @@
   // out-of-range value never persists past a blur/Enter. Clamping on every
   // keystroke instead would snap the displayed value mid-type, fighting the
   // user — brief calls for "clamp on change" specifically.
-  function colorField(hue, keyName, labelText, value, min, max, step, refs, hintText) {
-    var baseId = 'ctl-color-' + hue + '-' + keyName;
-    var hintId = baseId + '-hint';
-    function commitClamped(raw) {
-      // On blur/Enter: if the field is empty or non-numeric, restore it to
-      // the live store value instead of snapping to 0 — a blurred-empty
-      // field must never linger blank nor corrupt the palette.
-      if (raw === '' || isNaN(Number(raw))) {
-        number.value = String(store.get().color.palettes[hue][keyName]);
-        return;
-      }
-      store.setPath(['color', 'palettes', hue, keyName], clamp(Number(raw), min, max));
-    }
-    var number = el('input', {
-      type: 'number', id: baseId, value: String(value),
-      min: String(min), max: String(max), step: String(step), 'aria-describedby': hintId,
-      oninput: function (e) {
-        var raw = e.target.value;
-        // Don't commit while the field is mid-edit-empty or non-numeric; this
-        // lets the user clear-and-retype without the value snapping to 0 and
-        // triggering a rebuild.
-        if (raw === '' || isNaN(Number(raw))) return;
-        store.setPath(['color', 'palettes', hue, keyName], Number(raw));
-      },
-      onchange: function (e) { commitClamped(e.target.value); }
-    });
-    var range = el('input', {
-      type: 'range', id: baseId + '-range', 'aria-label': labelText + ' (slider)', 'aria-describedby': hintId,
-      value: String(value), min: String(min), max: String(max), step: String(step),
-      oninput: function (e) {
-        var v = Number(e.target.value);
-        number.value = String(v);        // keep paired number in sync, no commit
-        refs.repaint();                  // live swatch repaint, DOM preserved
-      },
-      onchange: function (e) { commitClamped(e.target.value); }
-    });
-    refs[keyName] = { number: number, range: range };
-    var label = el('label', { for: baseId, text: labelText });
-    var hint = el('span', { id: hintId, class: 'field-hint', text: hintText || '' });
-    return el('div', { class: 'field-row' }, [label, range, number, hint]);
+  // ---- Manual color scale editor ---------------------------------------
+  // cfg.color = { order:[names], scales:{ name:{ step:hex } } }. Fully editable
+  // — add/rename/delete scales and steps, edit each value. Every CRUD op mutates
+  // a clone of cfg.color and commits once (one undo step). Values commit on
+  // 'change' (blur / picker release), so typing/dragging never rebuilds mid-edit.
+  function updateColor(mutate) {
+    var color = JSON.parse(JSON.stringify(store.get().color));
+    mutate(color);
+    store.setPath(['color'], color);
   }
+  function uniqueKey(existing, base) {
+    var k = base, n = 1;
+    while (existing.indexOf(k) !== -1) { k = base + n; n++; }
+    return k;
+  }
+  var HEX6 = /^#[0-9a-fA-F]{6}$/;
+  var HEXA = /^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/; // opaque OR #RRGGBBAA (alpha scales)
 
-  function renderHueRow(cfg, ramps, hue) {
-    var p = cfg.color.palettes[hue];
-    var swatchNodes = {};
-    var swatches = C.DEFAULT_CONFIG.steps.map(function (step) {
-      var hex = ramps[hue][String(step)];
-      var node = el('div', {
-        class: 'swatch', id: 'swatch-' + hue + '-' + step,
-        style: 'background:' + hex, title: hue + ' ' + step + ' ' + hex
-      });
-      swatchNodes[String(step)] = node;
-      return node;
+  // One step: color picker + editable step name + hex text + delete. Values may
+  // carry alpha (#RRGGBBAA). The native picker edits only RGB, so it preserves
+  // the existing alpha suffix; the hex field is the source of truth for alpha,
+  // and the preview shows it over a checkerboard.
+  function renderStepRow(scaleName, stepName, hex) {
+    var alpha = hex.length === 9 ? hex.slice(7) : '';        // '' or 'AA'
+    var rgb = hex.slice(0, 7);
+    var picker = el('input', {
+      type: 'color', class: 'step-picker', 'aria-label': scaleName + ' ' + stepName + ' color',
+      value: HEX6.test(rgb) ? rgb : '#000000',
+      oninput: function (e) { hexInput.value = e.target.value.toUpperCase() + alpha; },   // keep alpha
+      onchange: function (e) { var v = e.target.value.toUpperCase() + alpha; updateColor(function (c) { c.scales[scaleName][stepName] = v; }); }
     });
-    var strip = el('div', { class: 'swatch-strip', role: 'img', 'aria-label': hue + ' ramp preview' }, swatches);
-
-    var refs = {
-      // recompute this hue's ramp from the CURRENT live control values and
-      // repaint the existing swatch nodes in place (no rebuild).
-      repaint: function () {
-        var liveH = Number(refs.H.range.value);
-        var liveCpk = Number(refs.Cpk.range.value);
-        var ramp = C.buildRamp(liveH, liveCpk, cfg.curves.Lc, cfg.curves.Cm);
-        C.DEFAULT_CONFIG.steps.forEach(function (step) {
-          var hex = ramp[String(step)];
-          var node = swatchNodes[String(step)];
-          node.style.background = hex;
-          node.title = hue + ' ' + step + ' ' + hex;
+    var hexInput = el('input', {
+      type: 'text', class: 'step-hex', 'aria-label': scaleName + ' ' + stepName + ' hex', value: hex,
+      oninput: function (e) { var v = e.target.value.trim(); if (HEXA.test(v)) picker.value = v.slice(0, 7); }, // live sync RGB
+      onchange: function (e) {
+        var v = e.target.value.trim().toUpperCase();
+        if (!HEXA.test(v)) { e.target.value = hex; return; }                          // revert invalid
+        updateColor(function (c) { c.scales[scaleName][stepName] = v; });
+      }
+    });
+    var nameInput = el('input', {
+      type: 'text', id: 'ctl-color-' + scaleName + '-' + stepName + '-name', class: 'step-name',
+      'aria-label': scaleName + ' step name', value: stepName,
+      onchange: function (e) {
+        var nn = e.target.value.trim();
+        if (!nn || nn === stepName) { e.target.value = stepName; return; }
+        updateColor(function (c) {
+          var s = c.scales[scaleName], next = {};
+          Object.keys(s).forEach(function (k) { next[k === stepName ? uniqueKey(Object.keys(next), nn) : k] = s[k]; });
+          c.scales[scaleName] = next;
         });
       }
-    };
-
-    var hRow = colorField(hue, 'H', 'H', p.H, 0, 360, 1, refs, '권장 범위 0–360 (색상 각도)');
-    var cpkRow = colorField(hue, 'Cpk', 'Cpk', p.Cpk, 0, 0.4, 0.005, refs, '권장 범위 0–0.4 (채도 피크)');
-    return el('div', { class: 'hue-row' }, [
-      el('div', { class: 'hue-title', text: hue }),
-      hRow, cpkRow, strip
-    ]);
+    });
+    var del = el('button', {
+      type: 'button', class: 'kv-del-btn', 'aria-label': 'Delete step ' + stepName,
+      onclick: function () { updateColor(function (c) { delete c.scales[scaleName][stepName]; }); }
+    }, [icon('trash')]);
+    return el('div', { class: 'step-row' }, [picker, nameInput, hexInput, del]);
   }
 
-  function renderCurveEditor(cfg) {
-    function curveCell(id, label, path, v, lo, hi, step) {
-      var input = el('input', {
-        type: 'number', id: id, value: String(v), min: String(lo), max: String(hi), step: String(step),
-        oninput: function (e) {
-          var raw = e.target.value;
-          if (raw === '' || isNaN(Number(raw))) return; // allow clear-and-retype
-          store.setPath(path, Number(raw));
-        },
-        onchange: function (e) {
-          var raw = e.target.value;
-          if (raw === '' || isNaN(Number(raw))) { input.value = String(getAtPath(store.get(), path)); return; }
-          store.setPath(path, clamp(Number(raw), lo, hi));
-        }
-      });
-      var lbl = el('label', { for: id, text: label });
-      return el('div', { class: 'curve-cell' }, [lbl, input]);
-    }
-    var lcCells = cfg.curves.Lc.map(function (v, i) {
-      return curveCell('ctl-curve-Lc-' + i, 'Lc[' + C.DEFAULT_CONFIG.steps[i] + ']', ['curves', 'Lc', i], v, 0, 1, 0.001);
+  // One scale: name + delete, its step rows, and an add-step button.
+  function renderScaleEditor(scaleName, stepMap) {
+    var nameInput = el('input', {
+      type: 'text', class: 'scale-name', 'aria-label': 'Color scale name', value: scaleName,
+      onchange: function (e) {
+        var nn = e.target.value.trim();
+        if (!nn || nn === scaleName) { e.target.value = scaleName; return; }
+        updateColor(function (c) {
+          var un = uniqueKey(c.order.filter(function (x) { return x !== scaleName; }), nn);
+          c.order = c.order.map(function (x) { return x === scaleName ? un : x; });
+          c.scales[un] = c.scales[scaleName];
+          if (un !== scaleName) delete c.scales[scaleName];
+        });
+      }
     });
-    var cmCells = cfg.curves.Cm.map(function (v, i) {
-      return curveCell('ctl-curve-Cm-' + i, 'Cm[' + C.DEFAULT_CONFIG.steps[i] + ']', ['curves', 'Cm', i], v, 0, 2, 0.01);
-    });
-    return el('details', detailsAttrs('grp-curves', false), [
-      el('summary', { text: 'Advanced curve (shared Lc / Cm)' }),
-      el('div', { class: 'group-body' }, [
-        groupResetBtn('Advanced curve (shared Lc / Cm)', 'curves'),
-        el('p', { class: 'panel-hint', text: '권장 범위 — Lc(밝기): 0–1, Cm(채도 배율): 0–2. 11스텝(50–950) 공통 커브.' }),
-        el('h2', { text: 'Lc (lightness per step)' }),
-        el('div', { class: 'curve-grid' }, lcCells),
-        el('h2', { text: 'Cm (chroma multiplier per step)' }),
-        el('div', { class: 'curve-grid' }, cmCells)
-      ])
-    ]);
+    var del = el('button', {
+      type: 'button', class: 'kv-del-btn', 'aria-label': 'Delete color ' + scaleName,
+      onclick: function () { updateColor(function (c) { c.order = c.order.filter(function (x) { return x !== scaleName; }); delete c.scales[scaleName]; }); }
+    }, [icon('trash')]);
+    var stepRows = Object.keys(stepMap).map(function (step) { return renderStepRow(scaleName, step, stepMap[step]); });
+    var addStep = el('button', {
+      type: 'button', class: 'kv-add-row',
+      onclick: function () {
+        var k = uniqueKey(Object.keys(store.get().color.scales[scaleName]), 'new');
+        pendingFocusId = 'ctl-color-' + scaleName + '-' + k + '-name';
+        updateColor(function (c) { c.scales[scaleName][k] = '#000000'; });
+      }
+    }, iconLabel('plus', 'Add step'));
+    return el('div', { class: 'scale-block' },
+      [el('div', { class: 'scale-head' }, [nameInput, del])].concat(stepRows).concat([addStep]));
   }
 
   // Module bodies are split out (colorPanelBody/typePanelBody/kvSectionBody)
@@ -278,9 +253,16 @@
   // wraps the same body in a <details>. Titled "Palette" (not "Color") so it
   // doesn't just echo its parent category "Color".
   function colorPanelBody(cfg) {
-    var ramps = C.buildAllRamps(cfg);
-    var rows = cfg.color.order.map(function (hue) { return renderHueRow(cfg, ramps, hue); });
-    return el('div', { class: 'group-body' }, [groupResetBtn('Palette', 'color')].concat(rows).concat([renderCurveEditor(cfg)]));
+    var scaleEls = cfg.color.order.map(function (name) { return renderScaleEditor(name, cfg.color.scales[name] || {}); });
+    var addScale = el('button', {
+      type: 'button', class: 'kv-add-row scale-add',
+      onclick: function () {
+        var k = uniqueKey(store.get().color.order, 'color');
+        pendingFocusId = null;
+        updateColor(function (c) { c.order.push(k); c.scales[k] = { '500': '#808080' }; });
+      }
+    }, iconLabel('plus', 'Add color'));
+    return el('div', { class: 'group-body' }, [groupResetBtn('Palette', 'color')].concat(scaleEls).concat([addScale]));
   }
   function renderColorPanel(cfg) {
     return el('details', detailsAttrs('grp-color', true, 'group'), [
@@ -650,11 +632,12 @@
 
   function renderColorPreview(cfg, ramps) {
     var rows = cfg.color.order.map(function (hue) {
-      var swatches = C.DEFAULT_CONFIG.steps.map(function (step) {
-        var hex = ramps[hue][String(step)];
-        return el('div', { class: 'pv-color-swatch', style: 'background:' + hex, title: hue + ' ' + step + ' ' + hex });
+      var steps = Object.keys(ramps[hue]);
+      var swatches = steps.map(function (step) {
+        var hex = ramps[hue][step];
+        return el('div', { class: 'pv-color-swatch', id: 'pv-swatch-' + hue + '-' + step, style: 'background:' + hex, title: hue + ' ' + step + ' ' + hex });
       });
-      var captions = C.DEFAULT_CONFIG.steps.map(function (step) {
+      var captions = steps.map(function (step) {
         return el('div', { class: 'pv-color-caption', text: String(step) });
       });
       var col = el('div', { class: 'pv-color-col' }, [
@@ -999,11 +982,12 @@
   // white and a black background. Steps are derived live via C.contrastRatio.
   function renderAccessibilityView(cfg) {
     var ramps = C.buildAllRamps(cfg);
-    var steps = C.DEFAULT_CONFIG.steps;
+    // Step names are arbitrary now, so pick by ORDER: 'first' = lightest passing
+    // (white bg), 'last' = darkest passing (black bg).
     function passStep(ramp, bg, thr, pick) {
-      var p = steps.filter(function (s) { return C.contrastRatio(ramp[String(s)], bg) >= thr; });
+      var p = Object.keys(ramp).filter(function (s) { return C.contrastRatio(ramp[s], bg) >= thr; });
       if (!p.length) return null;
-      return pick === 'min' ? Math.min.apply(null, p) : Math.max.apply(null, p);
+      return pick === 'first' ? p[0] : p[p.length - 1];
     }
     function cell(step) {
       return el('td', {}, [step == null
@@ -1016,10 +1000,10 @@
       var r = ramps[hue];
       return el('tr', {}, [
         el('td', { class: 'contrast-hue-cell', text: hue }),
-        cell(passStep(r, '#FFFFFF', 4.5, 'min')),
-        cell(passStep(r, '#FFFFFF', 7, 'min')),
-        cell(passStep(r, '#000000', 4.5, 'max')),
-        cell(passStep(r, '#000000', 7, 'max'))
+        cell(passStep(r, '#FFFFFF', 4.5, 'first')),
+        cell(passStep(r, '#FFFFFF', 7, 'first')),
+        cell(passStep(r, '#000000', 4.5, 'last')),
+        cell(passStep(r, '#000000', 7, 'last'))
       ]);
     });
     var table = el('table', { class: 'contrast-table' }, [el('thead', {}, [head]), el('tbody', {}, rows)]);

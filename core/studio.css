@@ -185,30 +185,38 @@
     #app[data-tab="preview"] .panel-col { display: none; }
     .panel-col { border-left: none; }
   }
-  .field-hint, .panel-hint { font-size: 12px; color: var(--muted); margin: 0 0 6px; }
-  /* Per-field hints repeat identically across all 10 hues (H/Cpk ranges),
-     so keeping them always-visible buries the color ramp under 20 lines of
-     gray noise. Hide them from view by default but keep them in the a11y tree
-     (visually-hidden, not display:none, so aria-describedby still resolves),
-     then reveal only while that row is being edited. */
-  .field-row .field-hint {
-    margin: 0; flex-basis: 100%;
-    position: absolute; width: 1px; height: 1px; overflow: hidden;
-    clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
-  }
-  .field-row:focus-within .field-hint {
-    position: static; width: auto; height: auto; overflow: visible;
-    clip: auto; clip-path: none; white-space: normal; margin-top: 2px;
-  }
+  .panel-hint { font-size: 12px; color: var(--muted); margin: 0 0 6px; }
   .hue-row { border-top: 1px solid var(--hairline); padding: 12px 0; }
   .hue-row:first-child { border-top: none; padding-top: 4px; }
-  .hue-title { font-size: 13px; font-weight: 650; margin-bottom: 8px; text-transform: capitalize; letter-spacing: -0.01em; }
+  /* Title + focus hint share one row. The hint fills the remaining width and
+     truncates (never wraps), so showing/hiding it on focus can't change the
+     row height — the controls below never shift. */
+  .hue-title-row { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+  .hue-title { flex: 0 0 auto; font-size: 13px; font-weight: 650; text-transform: capitalize; letter-spacing: -0.01em; }
+  .hue-hint { flex: 1 1 auto; min-width: 0; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .field-row { display: flex; align-items: center; gap: 10px; margin: 5px 0; flex-wrap: wrap; }
   .field-row label { min-width: 40px; font-size: 12px; color: var(--muted); }
   .field-row input[type="range"] { flex: 1 1 120px; accent-color: var(--accent); }
   .field-row input[type="number"] { width: 78px; font-variant-numeric: tabular-nums; }
   .swatch-strip { display: flex; margin-top: 6px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
   .swatch { flex: 1; height: 30px; }
+  /* Manual color scale editor: a scale block (name + delete) over its step
+     rows (swatch picker + step name + hex), each freely editable. */
+  .scale-block { border-top: 1px solid var(--hairline); padding: 14px 0; }
+  .scale-block:first-child { border-top: none; padding-top: 4px; }
+  .scale-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .scale-name { flex: 1 1 auto; min-width: 0; font-weight: 650; }
+  .step-row { display: flex; align-items: center; gap: 6px; margin: 5px 0; }
+  .step-picker {
+    flex: 0 0 auto; width: 30px; height: 30px; padding: 0; cursor: pointer;
+    border: 1px solid var(--border-strong); border-radius: 8px; background: none;
+  }
+  .step-picker::-webkit-color-swatch-wrapper { padding: 3px; }
+  .step-picker::-webkit-color-swatch { border: none; border-radius: 5px; }
+  .step-picker::-moz-color-swatch { border: none; border-radius: 5px; }
+  .step-name { flex: 0 1 86px; min-width: 56px; }
+  .step-hex { flex: 1 1 100px; min-width: 88px; font-variant-numeric: tabular-nums; text-transform: uppercase; }
+  .scale-add { margin-top: 12px; }
   .curve-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 6px; margin-top: 8px; }
   .curve-cell { display: flex; flex-direction: column; gap: 2px; }
   .curve-cell label { font-size: 12px; color: var(--muted); }
@@ -254,7 +262,14 @@
   .pv-color-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
   .pv-color-label { min-width: 72px; font-size: 12px; text-transform: capitalize; color: var(--muted); }
   .pv-color-col { flex: 1; min-width: 0; }
-  .pv-color-strip { display: flex; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
+  /* Checkerboard behind swatches so alpha colors (#RRGGBBAA) read as transparent;
+     opaque swatches cover it fully, so solid ramps look unchanged. */
+  .pv-color-strip {
+    display: flex; border-radius: 8px; overflow: hidden; border: 1px solid var(--border);
+    background-image: linear-gradient(45deg, #c8ccd2 25%, transparent 25%), linear-gradient(-45deg, #c8ccd2 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #c8ccd2 75%), linear-gradient(-45deg, transparent 75%, #c8ccd2 75%);
+    background-size: 12px 12px; background-position: 0 0, 0 6px, 6px -6px, -6px 0;
+  }
   .pv-color-swatch { flex: 1; height: 36px; }
   .pv-color-caption-row { display: flex; margin-top: 2px; }
   .pv-color-caption { flex: 1; font-size: 12px; text-align: center; color: var(--muted-2); font-variant-numeric: tabular-nums; }

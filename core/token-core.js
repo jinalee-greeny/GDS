@@ -41,14 +41,25 @@
       Lc: [0.972,0.940,0.885,0.808,0.720,0.638,0.560,0.487,0.410,0.335,0.262],
       Cm: [0.30,0.55,0.85,1.05,1.15,1.10,1.00,0.88,0.72,0.55,0.42]
     },
+    // Manual color model: each scale is an ordered map of step-name -> hex,
+    // fully user-editable (add/rename/delete scales and steps, edit values).
+    // A single-value color (black/white) is just a one-step scale. Ramps are
+    // stored, not generated — buildRamp/curves remain only for optional
+    // "auto-fill from OKLCH" convenience.
     color: {
-      order: ['gray','red','orange','amber','green','teal','blue','violet','pink'],
-      palettes: {
-        gray:{H:268,Cpk:0.010}, red:{H:27,Cpk:0.190}, orange:{H:55,Cpk:0.170},
-        amber:{H:82,Cpk:0.165}, green:{H:150,Cpk:0.150}, teal:{H:185,Cpk:0.120},
-        blue:{H:255,Cpk:0.180}, violet:{H:290,Cpk:0.190}, pink:{H:350,Cpk:0.185}
-      },
-      base: { white:'#FFFFFF', black:'#000000' }
+      order: ['black','white','black-alpha','white-alpha','gray','red','blue','green'],
+      scales: {
+        black: { base:'#000000' },
+        white: { base:'#FFFFFF' },
+        // Alpha scales: a base color at increasing opacity, stored as #RRGGBBAA
+        // (dedicated tokens for overlays/scrims/tints — distinct from element opacity).
+        'black-alpha': {'5':'#0000000D','10':'#0000001A','20':'#00000033','40':'#00000066','60':'#00000099','80':'#000000CC'},
+        'white-alpha': {'5':'#FFFFFF0D','10':'#FFFFFF1A','20':'#FFFFFF33','40':'#FFFFFF66','60':'#FFFFFF99','80':'#FFFFFFCC'},
+        gray:{'50':'#F5F6F8','100':'#E9EBEF','200':'#D7D9DF','300':'#BDC0C7','400':'#A1A4AC','500':'#898B92','600':'#72747B','700':'#5D5F65','800':'#494A4E','900':'#35373A'},
+        red:{'50':'#FFE8E1','100':'#FFD1C5','200':'#FFAC9E','300':'#FF8477','400':'#FF5D53','500':'#F0443E','600':'#CC3430','700':'#AA2825','800':'#85201D','900':'#621A16'},
+        blue:{'50':'#DEF8FF','100':'#BFEFFF','200':'#91DDFF','300':'#63C2FF','400':'#36A4FF','500':'#1B8AFF','600':'#0A72DA','700':'#035EB6','800':'#07498E','900':'#0A3668'},
+        green:{'50':'#E1FFE6','100':'#C4FBCE','200':'#99F1AC','300':'#6BDC88','400':'#3DC267','500':'#21A651','600':'#0E8C41','700':'#067334','800':'#095A28','900':'#0C421E'}
+      }
     },
     fontFamily: {
       sans: "Pretendard, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
@@ -85,13 +96,18 @@
     return out;
   }
 
+  // Manual model: ramps are the stored step->hex maps (values are the source
+  // of truth, not generated). Kept as {scale: {step: hex}} so every downstream
+  // consumer (preview, contrast, exporters) is unchanged.
   function buildAllRamps(cfg) {
     var out = {};
-    cfg.color.order.forEach(function (name) {
-      var p = cfg.color.palettes[name];
-      out[name] = buildRamp(p.H, p.Cpk, cfg.curves.Lc, cfg.curves.Cm);
-    });
+    cfg.color.order.forEach(function (name) { out[name] = cfg.color.scales[name] || {}; });
     return out;
+  }
+  // A single-step scale (e.g. black/white) exports as a flat color, not a group.
+  function colorEntries(ramp) {
+    var keys = Object.keys(ramp);
+    return { single: keys.length === 1, keys: keys };
   }
 
   function toCSS(cfg) {
@@ -99,10 +115,10 @@
     var L = [':root {'];
     var push = function (name, val) { L.push('  --' + name + ': ' + val + ';'); };
     cfg.color.order.forEach(function (name) {
-      Object.keys(ramps[name]).forEach(function (s) { push('color-' + name + '-' + s, ramps[name][s]); });
+      var e = colorEntries(ramps[name]);
+      if (e.single) push('color-' + name, ramps[name][e.keys[0]]);
+      else e.keys.forEach(function (s) { push('color-' + name + '-' + s, ramps[name][s]); });
     });
-    push('color-white', cfg.color.base.white);
-    push('color-black', cfg.color.base.black);
     var each = function (obj, pre) { Object.keys(obj).forEach(function (k) { push(pre + k, obj[k]); }); };
     each(cfg.fontFamily, 'font-');
     each(cfg.fontSize, 'font-size-');
@@ -132,11 +148,12 @@
     var ramps = buildAllRamps(cfg);
     var color = {};
     cfg.color.order.forEach(function (name) {
+      var e = colorEntries(ramps[name]);
+      if (e.single) { color[name] = { $type: 'color', $value: ramps[name][e.keys[0]] }; return; }
       var g = {};
-      Object.keys(ramps[name]).forEach(function (s) { g[s] = { $type: 'color', $value: ramps[name][s] }; });
+      e.keys.forEach(function (s) { g[s] = { $type: 'color', $value: ramps[name][s] }; });
       color[name] = g;
     });
-    color.base = grp(cfg.color.base, 'color');
     var dtcg = {
       $description: DTCG_DESC,
       color: color,
@@ -159,9 +176,10 @@
   function toTailwind(cfg) {
     var ramps = buildAllRamps(cfg);
     var colors = {};
-    cfg.color.order.forEach(function (name) { colors[name] = ramps[name]; });
-    colors.white = cfg.color.base.white;
-    colors.black = cfg.color.base.black;
+    cfg.color.order.forEach(function (name) {
+      var e = colorEntries(ramps[name]);
+      colors[name] = e.single ? ramps[name][e.keys[0]] : ramps[name];
+    });
     var tw = { theme: { extend: {
       colors: colors,
       fontFamily: cfg.fontFamily,
@@ -191,11 +209,12 @@
     var ramps = buildAllRamps(cfg);
     var color = {};
     cfg.color.order.forEach(function (name) {
+      var e = colorEntries(ramps[name]);
+      if (e.single) { color[name] = { value: ramps[name][e.keys[0]], type: 'color' }; return; }
       var g = {};
-      Object.keys(ramps[name]).forEach(function (s) { g[s] = { value: ramps[name][s], type: 'color' }; });
+      e.keys.forEach(function (s) { g[s] = { value: ramps[name][s], type: 'color' }; });
       color[name] = g;
     });
-    color.base = { white: { value: cfg.color.base.white, type: 'color' }, black: { value: cfg.color.base.black, type: 'color' } };
     var out = {
       color: color,
       fontFamilies: tsGrp(cfg.fontFamily, 'fontFamilies'),
@@ -224,17 +243,21 @@
     return (hi + 0.05) / (lo + 0.05);
   }
 
+  // Step names are now arbitrary (manual model), so pick by ORDER not numeric
+  // value: on white the first passing step (lightest), on black the last
+  // passing step (darkest). Robust to single-step scales and non-numeric names.
   function contrastReport(cfg) {
     var ramps = buildAllRamps(cfg);
-    var hues = ['gray'].concat(cfg.color.order.filter(function (n) { return n !== 'gray'; }));
-    return hues.map(function (name) {
+    return cfg.color.order.map(function (name) {
       var ramp = ramps[name];
       var steps = Object.keys(ramp);
       var onWhite = steps.filter(function (s) { return contrastRatio(ramp[s], '#FFFFFF') >= 4.5; });
       var onBlack = steps.filter(function (s) { return contrastRatio(ramp[s], '#000000') >= 4.5; });
-      var minS = onWhite.length ? String(Math.min.apply(null, onWhite.map(Number))) : '—';
-      var maxS = onBlack.length ? String(Math.max.apply(null, onBlack.map(Number))) : '—';
-      return { hue: name, whiteMinStep: minS, blackMaxStep: maxS };
+      return {
+        hue: name,
+        whiteMinStep: onWhite.length ? onWhite[0] : '—',
+        blackMaxStep: onBlack.length ? onBlack[onBlack.length - 1] : '—'
+      };
     });
   }
 

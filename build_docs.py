@@ -3,7 +3,12 @@ OUT=os.path.dirname(os.path.abspath(__file__))
 T=json.load(open(f"{OUT}/tokens/tokens.json"))
 
 def val(node): return node["$value"]
-def ramp(name): return {k:val(v) for k,v in T["color"][name].items()}
+# A color scale is either a nested step map or a flat single-value color
+# (black/white); normalize both to {step: hex}.
+def ramp(name):
+    node=T["color"][name]
+    if "$value" in node: return {"base": node["$value"]}
+    return {k:val(v) for k,v in node.items()}
 color_names=[n for n in T["color"] if n!="base"]
 
 # ---------- contrast ----------
@@ -21,12 +26,12 @@ report.append("## 접근성(대비) 검증 — WCAG AA 4.5:1 기준\n")
 report.append("각 hue에서 흰 배경 대비 본문 텍스트로 안전한 최소 단계, 검은 배경(다크) 대비 최소 단계.\n")
 report.append("| 팔레트 | 흰 배경에 AA 통과 최소 step | 검은 배경에 AA 통과 최대 step |")
 report.append("|---|---|---|")
-for n in ["gray"]+ [x for x in color_names if x!="gray"]:
-    r=ramp(n)
-    on_white=[s for s,hx in r.items() if ratio(hx,white)>=4.5]
-    on_black=[s for s,hx in r.items() if ratio(hx,black)>=4.5]
-    ow=min(on_white,key=lambda s:int(s)) if on_white else "—"
-    ob=max(on_black,key=lambda s:int(s)) if on_black else "—"
+for n in color_names:
+    r=ramp(n); ks=list(r.keys())
+    on_white=[s for s in ks if ratio(r[s],white)>=4.5]
+    on_black=[s for s in ks if ratio(r[s],black)>=4.5]
+    ow=on_white[0] if on_white else "—"   # order-based: first (lightest) passing
+    ob=on_black[-1] if on_black else "—"   # last (darkest) passing
     report.append(f"| {n} | {ow} | {ob} |")
 contrast_md="\n".join(report)
 
@@ -53,7 +58,7 @@ html=['<!doctype html><meta charset="utf-8"><title>Design System Preset — Foun
 '.wrap{max-width:960px;margin:0 auto;padding:48px 24px}',
 'h1{font-size:32px;margin:0 0 4px}h2{font-size:20px;margin:44px 0 14px;padding-bottom:8px;border-bottom:1px solid #e5e5e5}',
 '.sub{color:#888;font-size:14px;margin-bottom:8px}',
-'.ramp{display:grid;grid-template-columns:repeat(11,1fr);gap:4px;margin-bottom:6px}',
+'.ramp{display:grid;grid-template-columns:repeat(auto-fit,minmax(56px,1fr));gap:4px;margin-bottom:6px}',
 '.rname{font-size:12px;font-weight:700;text-transform:capitalize;margin:10px 0 4px}',
 '.sw{border-radius:6px;height:52px;display:flex;flex-direction:column;justify-content:flex-end;padding:5px;font-family:ui-monospace,Menlo,monospace;font-size:9px}',
 '.sw b{font-size:10px}.sw span{opacity:.8}',

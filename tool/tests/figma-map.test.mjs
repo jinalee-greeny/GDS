@@ -44,8 +44,11 @@ test('variablesPlan color entries are COLOR with slash names', () => {
   const blue500 = plan.find(p => p.name === 'color/blue/500');
   assert.equal(blue500.type, 'COLOR');
   assert.equal(JSON.stringify(blue500.value), JSON.stringify(FM.hexToFigmaRGB('#1B8AFF')));
-  // white/black base included
-  assert.ok(plan.find(p => p.name === 'color/base/white'));
+  // single-value scales are flat (no step segment): color/black, color/white
+  const white = plan.find(p => p.name === 'color/white');
+  assert.ok(white);
+  assert.equal(JSON.stringify(white.value), JSON.stringify(FM.hexToFigmaRGB('#FFFFFF')));
+  assert.ok(!plan.find(p => p.name === 'color/base/white'));
 });
 
 test('variablesPlan numeric groups are FLOAT with units stripped', () => {

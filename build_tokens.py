@@ -25,9 +25,21 @@ def hexof(L,C,H):
 steps=[50,100,200,300,400,500,600,700,800,900,950]
 Lc=[0.972,0.940,0.885,0.808,0.720,0.638,0.560,0.487,0.410,0.335,0.262]
 Cm=[0.30,0.55,0.85,1.05,1.15,1.10,1.00,0.88,0.72,0.55,0.42]
-palettes={"gray":(268,0.010),"red":(27,0.190),"orange":(55,0.170),"amber":(82,0.165),
- "green":(150,0.150),"teal":(185,0.120),"blue":(255,0.180),"violet":(290,0.190),"pink":(350,0.185)}
-color_ramps={n:{str(s):hexof(L,Cpk*cm,H) for s,L,cm in zip(steps,Lc,Cm)} for n,(H,Cpk) in palettes.items()}
+# Manual color model (mirrors core/token-core.js DEFAULT_CONFIG.color exactly).
+# Each scale is an ordered step->hex map; a single-step scale (black/white) is
+# a flat color. Order matters — output must byte-match the JS engine.
+color_order=["black","white","black-alpha","white-alpha","gray","red","blue","green"]
+color_scales={
+ "black":{"base":"#000000"},
+ "white":{"base":"#FFFFFF"},
+ "black-alpha":{"5":"#0000000D","10":"#0000001A","20":"#00000033","40":"#00000066","60":"#00000099","80":"#000000CC"},
+ "white-alpha":{"5":"#FFFFFF0D","10":"#FFFFFF1A","20":"#FFFFFF33","40":"#FFFFFF66","60":"#FFFFFF99","80":"#FFFFFFCC"},
+ "gray":{"50":"#F5F6F8","100":"#E9EBEF","200":"#D7D9DF","300":"#BDC0C7","400":"#A1A4AC","500":"#898B92","600":"#72747B","700":"#5D5F65","800":"#494A4E","900":"#35373A"},
+ "red":{"50":"#FFE8E1","100":"#FFD1C5","200":"#FFAC9E","300":"#FF8477","400":"#FF5D53","500":"#F0443E","600":"#CC3430","700":"#AA2825","800":"#85201D","900":"#621A16"},
+ "blue":{"50":"#DEF8FF","100":"#BFEFFF","200":"#91DDFF","300":"#63C2FF","400":"#36A4FF","500":"#1B8AFF","600":"#0A72DA","700":"#035EB6","800":"#07498E","900":"#0A3668"},
+ "green":{"50":"#E1FFE6","100":"#C4FBCE","200":"#99F1AC","300":"#6BDC88","400":"#3DC267","500":"#21A651","600":"#0E8C41","700":"#067334","800":"#095A28","900":"#0C421E"},
+}
+color_ramps=color_scales
 
 # ---------- foundation scales ----------
 font_family={"sans":"Pretendard, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
@@ -53,15 +65,19 @@ easing={"standard":"cubic-bezier(0.4,0,0.2,1)","decelerate":"cubic-bezier(0,0,0.
 # ---------- DTCG builder ----------
 def grp(tokens,ttype):
     return {k:{"$type":ttype,"$value":v} for k,v in tokens.items()}
-def color_grp(ramps):
+def color_grp(order,scales):
     out={}
-    for name,ramp in ramps.items():
-        out[name]={s:{"$type":"color","$value":v} for s,v in ramp.items()}
+    for name in order:
+        ramp=scales[name]
+        if len(ramp)==1:
+            out[name]={"$type":"color","$value":list(ramp.values())[0]}
+        else:
+            out[name]={s:{"$type":"color","$value":v} for s,v in ramp.items()}
     return out
 
 dtcg={
  "$description":"Master Design System Preset — Foundations (primitive layer). Platform-agnostic, DTCG-aligned.",
- "color":{**color_grp(color_ramps),"base":grp({"white":"#FFFFFF","black":"#000000"},"color")},
+ "color":color_grp(color_order,color_scales),
  "font":{
    "family":grp(font_family,"fontFamily"),
    "size":grp(font_size,"dimension"),
@@ -83,10 +99,12 @@ with open(f"{OUT}/tokens/tokens.json","w") as f: json.dump(dtcg,f,indent=2,ensur
 
 # ---------- CSS variables ----------
 css=[":root {"]
-for name,ramp in color_ramps.items():
-    for s,v in ramp.items(): css.append(f"  --color-{name}-{s}: {v};")
-css.append("  --color-white: #FFFFFF;")
-css.append("  --color-black: #000000;")
+for name in color_order:
+    ramp=color_scales[name]
+    if len(ramp)==1:
+        css.append(f"  --color-{name}: {list(ramp.values())[0]};")
+    else:
+        for s,v in ramp.items(): css.append(f"  --color-{name}-{s}: {v};")
 for k,v in font_family.items(): css.append(f"  --font-{k}: {v};")
 for k,v in font_size.items(): css.append(f"  --font-size-{k}: {v};")
 for k,v in font_weight.items(): css.append(f"  --font-weight-{k}: {v};")
@@ -107,7 +125,7 @@ open(f"{OUT}/build/tokens.css","w").write("\n".join(css)+"\n")
 # ---------- Tailwind preset ----------
 tw={
  "theme":{"extend":{
-   "colors":{**color_ramps,"white":"#FFFFFF","black":"#000000"},
+   "colors":{name:(list(color_scales[name].values())[0] if len(color_scales[name])==1 else color_scales[name]) for name in color_order},
    "fontFamily":{k:v for k,v in font_family.items()},
    "fontSize":font_size,"fontWeight":font_weight,"lineHeight":line_height,"letterSpacing":letter_spacing,
    "spacing":space,"borderRadius":radius,"borderWidth":border_width,"opacity":opacity,"boxShadow":shadow,
@@ -122,9 +140,12 @@ ts={}
 def add(cat,d):
     ts[cat]={k:{"value":v,"type":cat} for k,v in d.items()}
 tsout={"color":{}}
-for name,ramp in color_ramps.items():
-    tsout["color"][name]={s:{"value":v,"type":"color"} for s,v in ramp.items()}
-tsout["color"]["base"]={"white":{"value":"#FFFFFF","type":"color"},"black":{"value":"#000000","type":"color"}}
+for name in color_order:
+    ramp=color_scales[name]
+    if len(ramp)==1:
+        tsout["color"][name]={"value":list(ramp.values())[0],"type":"color"}
+    else:
+        tsout["color"][name]={s:{"value":v,"type":"color"} for s,v in ramp.items()}
 tsout["fontFamilies"]={k:{"value":v,"type":"fontFamilies"} for k,v in font_family.items()}
 tsout["fontSizes"]={k:{"value":v,"type":"fontSizes"} for k,v in font_size.items()}
 tsout["fontWeights"]={k:{"value":v,"type":"fontWeights"} for k,v in font_weight.items()}

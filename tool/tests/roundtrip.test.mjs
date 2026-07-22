@@ -36,7 +36,7 @@ const DIRECT_GROUPS = ['fontSize', 'space', 'radius', 'borderWidth', 'opacity', 
 // JSON.stringify compare throughout: the restored config is built inside the
 // vm realm, so its Object/Array constructors differ from this realm's —
 // assert.deepEqual would fail on cross-realm prototype checks.
-test('round-trip: toDTCG(DEFAULT_CONFIG) restores all 14 direct groups + color.base', () => {
+test('round-trip: toDTCG(DEFAULT_CONFIG) restores all 14 direct groups + color', () => {
   const dtcgText = C.toDTCG(C.DEFAULT_CONFIG);
   const result = configFromDTCG(dtcgText, C.DEFAULT_CONFIG);
   assert.equal(result.error, null);
@@ -44,14 +44,13 @@ test('round-trip: toDTCG(DEFAULT_CONFIG) restores all 14 direct groups + color.b
   for (const g of DIRECT_GROUPS) {
     assert.equal(JSON.stringify(result.config[g]), JSON.stringify(C.DEFAULT_CONFIG[g]), 'group mismatch: ' + g);
   }
-  assert.equal(JSON.stringify(result.config.color.base), JSON.stringify(C.DEFAULT_CONFIG.color.base));
+  assert.equal(JSON.stringify(result.config.color.order), JSON.stringify(C.DEFAULT_CONFIG.color.order));
 });
 
 test('round-trip: color ramps are preserved from current cfg, NOT reverse-engineered', () => {
   const dtcgText = C.toDTCG(C.DEFAULT_CONFIG);
   const result = configFromDTCG(dtcgText, C.DEFAULT_CONFIG);
-  assert.equal(JSON.stringify(result.config.color.palettes), JSON.stringify(C.DEFAULT_CONFIG.color.palettes));
-  assert.equal(JSON.stringify(result.config.curves), JSON.stringify(C.DEFAULT_CONFIG.curves));
+  assert.equal(JSON.stringify(result.config.color.scales), JSON.stringify(C.DEFAULT_CONFIG.color.scales));
 });
 
 test('round-trip: malformed JSON returns an error result, never throws, cfg untouched', () => {
