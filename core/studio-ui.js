@@ -17,6 +17,19 @@
     var categoryHeaderExtras = opts.categoryHeaderExtras || function () { return null; };
     var categoryBodyTop = opts.categoryBodyTop || function () { return null; };
     var categoryBodyExtras = opts.categoryBodyExtras || function () { return null; };
+    // How depth-2 modules are laid out inside a category. 'tabs' (web shell):
+    // one module shown at a time via a tab bar. 'accordion' (default, plugin):
+    // each module is its own collapsible — required there because the plugin
+    // injects a per-module export toggle (moduleExtras) that must stay visible
+    // alongside every module, which a one-at-a-time tab view would hide.
+    var moduleLayout = opts.moduleLayout || 'accordion';
+    var categoryTabState = {}; // cat.key -> active module groupKey (tabs mode)
+    // Overall shell layout. 'master-detail' (web): a top domain selector shows
+    // ONE domain at a time with its preview (left) beside its settings (right).
+    // 'stacked' (default, plugin): all categories + full preview, as the plugin
+    // export workflow needs every category's toggles visible at once.
+    var layout = opts.layout || 'stacked';
+    var activeDomain = 'color'; // master-detail: selected domain key
 
   function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
   function getAtPath(obj, path) {
@@ -71,27 +84,63 @@
   // summary's event path.
   function groupResetBtn(labelText, groupKey) {
     return el('button', {
-      type: 'button', class: 'group-reset-btn', text: 'Reset',
+      type: 'button', class: 'group-reset-btn',
       'aria-label': labelText + ' group: reset to defaults',
       onclick: function () {
         if (window.confirm(labelText + ' 그룹을 기본값으로 되돌릴까요? (실행 취소로 복구 가능)')) {
           store.resetGroup(groupKey);
         }
       }
-    });
+    }, iconLabel('reset', 'Reset'));
   }
 
   function el(tag, attrs, children) {
     var n = document.createElement(tag);
-    if (attrs) Object.keys(attrs).forEach(function (k) {
-      if (k === 'class') n.className = attrs[k];
-      else if (k.slice(0, 2) === 'on') n.addEventListener(k.slice(2).toLowerCase(), attrs[k]);
-      else if (k === 'text') n.textContent = attrs[k];
-      else n.setAttribute(k, attrs[k]);
-    });
+    if (attrs) {
+      var deferredValue, hasValue = false;
+      Object.keys(attrs).forEach(function (k) {
+        if (k === 'value') { deferredValue = attrs[k]; hasValue = true; return; }
+        if (k === 'class') n.className = attrs[k];
+        else if (k.slice(0, 2) === 'on') n.addEventListener(k.slice(2).toLowerCase(), attrs[k]);
+        else if (k === 'text') n.textContent = attrs[k];
+        else n.setAttribute(k, attrs[k]);
+      });
+      // Apply `value` LAST: a range input clamps/snaps to its CURRENT
+      // min/max/step, so setting value before those (via attribute order) pegs
+      // it to the defaults (max 100, step 1) — e.g. H 268 -> 100, Cpk 0.19 -> 0.
+      if (hasValue) n.value = deferredValue;
+    }
     (children || []).forEach(function (c) { n.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
     return n;
   }
+
+  // Phosphor Icons (regular, MIT) — https://github.com/phosphor-icons/core
+  // Inlined as raw path data because this app must run offline: the Figma
+  // plugin manifest is networkAccess:none and the web build is a single
+  // self-contained HTML file, so no CDN/npm import is possible.
+  var ICONS = {
+    undo: 'M236,144a68.07,68.07,0,0,1-68,68H80a12,12,0,0,1,0-24h88a44,44,0,0,0,0-88H61l27.52,27.51a12,12,0,0,1-17,17l-48-48a12,12,0,0,1,0-17l48-48a12,12,0,1,1,17,17L61,76H168A68.08,68.08,0,0,1,236,144Z',
+    redo: 'M167.51,127.51,195,100H88a44,44,0,0,0,0,88h88a12,12,0,0,1,0,24H88A68,68,0,0,1,88,76H195L167.51,48.49a12,12,0,1,1,17-17l48,48a12,12,0,0,1,0,17l-48,48a12,12,0,0,1-17-17Z',
+    reset: 'M228,128a100,100,0,0,1-98.66,100H128a99.39,99.39,0,0,1-68.62-27.29,12,12,0,0,1,16.48-17.45,76,76,0,1,0-1.57-109c-.13.13-.25.25-.39.37L54.89,92H72a12,12,0,0,1,0,24H24a12,12,0,0,1-12-12V56a12,12,0,0,1,24,0V76.72L57.48,57.06A100,100,0,0,1,228,128Z',
+    trash: 'M216,48H180V36A28,28,0,0,0,152,8H104A28,28,0,0,0,76,36V48H40a12,12,0,0,0,0,24h4V208a20,20,0,0,0,20,20H192a20,20,0,0,0,20-20V72h4a12,12,0,0,0,0-24ZM100,36a4,4,0,0,1,4-4h48a4,4,0,0,1,4,4V48H100Zm88,168H68V72H188ZM116,104v64a12,12,0,0,1-24,0V104a12,12,0,0,1,24,0Zm48,0v64a12,12,0,0,1-24,0V104a12,12,0,0,1,24,0Z',
+    plus: 'M228,128a12,12,0,0,1-12,12H140v76a12,12,0,0,1-24,0V140H40a12,12,0,0,1,0-24h76V40a12,12,0,0,1,24,0v76h76A12,12,0,0,1,228,128Z'
+  };
+  // SVG needs the SVG namespace, so it can't go through el() (createElement).
+  function icon(name) {
+    var NS = 'http://www.w3.org/2000/svg';
+    var svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 256 256');
+    svg.setAttribute('class', 'icon');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('focusable', 'false');
+    var p = document.createElementNS(NS, 'path');
+    p.setAttribute('d', ICONS[name]);
+    p.setAttribute('fill', 'currentColor');
+    svg.appendChild(p);
+    return svg;
+  }
+  // Icon + text label as a button's children (icon leads, text follows).
+  function iconLabel(name, text) { return [icon(name), el('span', { text: text })]; }
 
   var FONT_SIZE_ORDER = ['xs', 'sm', 'md', 'lg', 'xl', '2xl', '3xl', '4xl', '5xl', '6xl'];
 
@@ -224,16 +273,22 @@
     ]);
   }
 
-  function renderColorPanel(cfg) {
+  // Module bodies are split out (colorPanelBody/typePanelBody/kvSectionBody)
+  // so the tab layout can render just the content, while the accordion layout
+  // wraps the same body in a <details>. Titled "Palette" (not "Color") so it
+  // doesn't just echo its parent category "Color".
+  function colorPanelBody(cfg) {
     var ramps = C.buildAllRamps(cfg);
     var rows = cfg.color.order.map(function (hue) { return renderHueRow(cfg, ramps, hue); });
+    return el('div', { class: 'group-body' }, [groupResetBtn('Palette', 'color')].concat(rows).concat([renderCurveEditor(cfg)]));
+  }
+  function renderColorPanel(cfg) {
     return el('details', detailsAttrs('grp-color', true, 'group'), [
-      el('summary', { text: 'Color' }),
-      el('div', { class: 'group-body' }, [groupResetBtn('Color', 'color')].concat(rows).concat([renderCurveEditor(cfg)]))
+      el('summary', { text: 'Palette' }), colorPanelBody(cfg)
     ]);
   }
 
-  function renderTypePanel(cfg) {
+  function typePanelBody(cfg) {
     var rows = FONT_SIZE_ORDER.map(function (key) {
       var id = 'ctl-fontsize-' + key;
       var px = parseFloat(cfg.fontSize[key]);
@@ -292,12 +347,14 @@
       applyBtn
     ]);
 
+    return el('div', { class: 'group-body' }, [
+      groupResetBtn('Type Scale', 'fontSize'),
+      el('p', { class: 'panel-hint', text: 'px 단위, 0 이상의 정수 권장. 각 스텝은 개별 수동값 — "Apply modular scale"로 base×ratio 커브를 일괄 채운 뒤 개별 수정할 수 있습니다.' })
+    ].concat(rows).concat([modScale]));
+  }
+  function renderTypePanel(cfg) {
     return el('details', detailsAttrs('grp-fontSize', true, 'group'), [
-      el('summary', { text: 'Type Scale' }),
-      el('div', { class: 'group-body' }, [
-        groupResetBtn('Type Scale', 'fontSize'),
-        el('p', { class: 'panel-hint', text: 'px 단위, 0 이상의 정수 권장. 각 스텝은 개별 수동값 — "Apply modular scale"로 base×ratio 커브를 일괄 채운 뒤 개별 수정할 수 있습니다.' })
-      ].concat(rows).concat([modScale]))
+      el('summary', { text: 'Type Scale' }), typePanelBody(cfg)
     ]);
   }
 
@@ -380,14 +437,15 @@
       });
 
       var removeBtn = el('button', {
-        type: 'button', text: 'Delete', 'aria-label': 'Delete ' + labelText + ' item: ' + key,
+        type: 'button', class: 'kv-del-btn', 'aria-label': 'Delete ' + labelText + ' item: ' + key,
         onclick: function () {
           var liveGroup = store.get()[groupKey];
           var next = {};
           Object.keys(liveGroup).forEach(function (k) { if (k !== key) next[k] = liveGroup[k]; });
           setGroup(groupKey, next);
         }
-      });
+      }, [icon('trash')]); // icon-only (aria-label carries the meaning); the
+      // label repeats on every KV row, so text would just add clutter.
 
       // role="alert" already implies an assertive live region on its own;
       // pairing it with aria-live="polite" is redundant (and contradictory —
@@ -398,7 +456,7 @@
     });
 
     var addBtn = el('button', {
-      type: 'button', class: 'kv-add-row', text: 'Add row',
+      type: 'button', class: 'kv-add-row',
       onclick: function () {
         var liveGroup = store.get()[groupKey];
         var liveKeys = Object.keys(liveGroup);
@@ -417,16 +475,18 @@
         pendingFocusId = 'ctl-kv-' + groupKey + '-' + liveKeys.length + '-key';
         setGroup(groupKey, next);
       }
-    });
+    }, iconLabel('plus', 'Add row'));
 
     return el('div', { class: 'kv-group-body' }, rows.concat([addBtn]));
   }
 
-  function renderKVSection(groupKey, labelText, opts) {
+  function kvSectionBody(groupKey, labelText, opts) {
     var sectionOpts = Object.assign({ label: labelText }, opts || {});
+    return el('div', { class: 'group-body' }, [groupResetBtn(labelText, groupKey), renderKVGroup(groupKey, sectionOpts)]);
+  }
+  function renderKVSection(groupKey, labelText, opts) {
     return el('details', detailsAttrs('grp-' + groupKey, false, 'group'), [
-      el('summary', { text: labelText }),
-      el('div', { class: 'group-body' }, [groupResetBtn(labelText, groupKey), renderKVGroup(groupKey, sectionOpts)])
+      el('summary', { text: labelText }), kvSectionBody(groupKey, labelText, opts)
     ]);
   }
 
@@ -476,6 +536,45 @@
     return renderKVSection(groupKey, entry.label, entry.opts);
   }
 
+  function moduleTitle(groupKey) {
+    if (groupKey === 'color') return 'Palette';
+    if (groupKey === 'fontSize') return 'Type Scale';
+    return KV_MAP[groupKey] ? KV_MAP[groupKey].label : groupKey;
+  }
+  function renderModuleBody(groupKey, cfg) {
+    if (groupKey === 'color') return colorPanelBody(cfg);
+    if (groupKey === 'fontSize') return typePanelBody(cfg);
+    var entry = KV_MAP[groupKey];
+    return kvSectionBody(groupKey, entry.label, entry.opts);
+  }
+
+  // Tabs layout (web shell): one module body shown at a time under a tab bar.
+  // A single-module category needs no tabs — its body shows directly (which
+  // also drops the otherwise-redundant module title, e.g. COLOR's "Palette").
+  // Active tab persists in categoryTabState across full re-renders; switching
+  // a tab only swaps the panel contents (no store write, no global rebuild).
+  function renderTabbedModules(cat, cfg) {
+    if (cat.modules.length === 1) return [renderModuleBody(cat.modules[0], cfg)];
+    var active = cat.modules.indexOf(categoryTabState[cat.key]) === -1
+      ? cat.modules[0] : categoryTabState[cat.key];
+    var panel = el('div', { class: 'mod-tabpanel' }, [renderModuleBody(active, cfg)]);
+    var tabs = cat.modules.map(function (groupKey) {
+      var btn = el('button', {
+        type: 'button', class: 'mod-tab', role: 'tab',
+        'aria-selected': groupKey === active ? 'true' : 'false',
+        onclick: function () {
+          categoryTabState[cat.key] = groupKey;
+          tabs.forEach(function (b) { b.setAttribute('aria-selected', 'false'); });
+          btn.setAttribute('aria-selected', 'true');
+          panel.innerHTML = '';
+          panel.appendChild(renderModuleBody(groupKey, store.get()));
+        }
+      }, [moduleTitle(groupKey)]);
+      return btn;
+    });
+    return [el('div', { class: 'mod-tabs', role: 'tablist' }, tabs), panel];
+  }
+
   // A category is now itself a collapsible <details> (default closed), whose
   // <summary> is the category header and whose body holds the module
   // <details> (2-level nesting). Open/close persistence works unchanged:
@@ -485,26 +584,31 @@
   // MUST be non-interactive (no interactive content in <summary> — see the
   // groupResetBtn precedent); categoryBodyTop is the first body row (the
   // plugin's interactive category master lives here, not in the summary).
-  function renderCategory(cat, cfg) {
+  function renderCategory(cat, cfg, defaultOpen) {
     var headerExtra = categoryHeaderExtras(cat.key, cfg);
     var summaryChildren = [el('span', { class: 'category-title', text: cat.name })]
       .concat(headerExtra ? [headerExtra] : []);
     var summary = el('summary', { class: 'category-header' }, summaryChildren);
 
-    var moduleRows = cat.modules.map(function (groupKey) {
-      var extra = moduleExtras(groupKey, cfg);
-      var moduleNode = renderModule(groupKey, cfg);
-      var rowChildren = (extra ? [extra] : []).concat([moduleNode]);
-      return el('div', { class: 'module-row' }, rowChildren);
-    });
+    var moduleNodes;
+    if (moduleLayout === 'tabs') {
+      moduleNodes = renderTabbedModules(cat, cfg);
+    } else {
+      moduleNodes = cat.modules.map(function (groupKey) {
+        var extra = moduleExtras(groupKey, cfg);
+        var moduleNode = renderModule(groupKey, cfg);
+        var rowChildren = (extra ? [extra] : []).concat([moduleNode]);
+        return el('div', { class: 'module-row' }, rowChildren);
+      });
+    }
 
     var bodyTop = categoryBodyTop(cat.key, cfg);
     var bodyExtra = categoryBodyExtras(cat.key, cfg);
-    var bodyChildren = (bodyTop ? [bodyTop] : []).concat(moduleRows);
+    var bodyChildren = (bodyTop ? [bodyTop] : []).concat(moduleNodes);
     if (bodyExtra) bodyChildren.push(bodyExtra);
     var body = el('div', { class: 'category-body' }, bodyChildren);
 
-    return el('details', detailsAttrs('cat-' + cat.key, false, 'category'), [summary, body]);
+    return el('details', detailsAttrs('cat-' + cat.key, !!defaultOpen, 'category'), [summary, body]);
   }
 
   // ---- Responsive Edit | Preview tab bar (narrow viewports only) ---------
@@ -666,9 +770,53 @@
     ].concat(rows));
   }
 
+  // Preview sections in render order; ids double as scroll anchors and the
+  // labels drive the sticky jump-nav so the two never drift out of sync.
+  var PREVIEW_SECTIONS = [
+    ['pv-color', 'Color'], ['pv-type', 'Type'], ['pv-spacing', 'Spacing'],
+    ['pv-radius', 'Radius'], ['pv-border', 'Border'], ['pv-shadow', 'Shadow'],
+    ['pv-opacity', 'Opacity'], ['pv-motion', 'Motion'], ['pv-a11y', 'A11y']
+  ];
+
+  // Preview sections grouped by token DOMAIN, mirroring the left control
+  // categories 1:1 (Color, Typography, Spacing & Sizing, Effects, Motion) so
+  // editing a category and reading its preview line up by name; Accessibility
+  // is preview-only. The jump-nav and the on-page group headers both come from
+  // this one list.
+  var PREVIEW_GROUPS = [
+    { id: 'pvg-color', label: 'Color', sections: ['pv-color'] },
+    { id: 'pvg-typography', label: 'Typography', sections: ['pv-type'] },
+    { id: 'pvg-spacing', label: 'Spacing & Sizing', sections: ['pv-spacing', 'pv-radius', 'pv-border'] },
+    { id: 'pvg-effects', label: 'Effects', sections: ['pv-shadow', 'pv-opacity'] },
+    { id: 'pvg-motion', label: 'Motion', sections: ['pv-motion'] },
+    { id: 'pvg-a11y', label: 'Accessibility', sections: ['pv-a11y'] }
+  ];
+
+  // Scroll ONLY the preview body, never bubble to the document root:
+  // scrollIntoView() would also scroll every ancestor (dragging the toolbar/
+  // left column with it), so compute the offset by hand.
+  function scrollPreviewTo(id) {
+    var container = document.getElementById('preview-col');
+    var t = document.getElementById(id);
+    if (!container || !t) return;
+    var top = container.scrollTop + (t.getBoundingClientRect().top - container.getBoundingClientRect().top);
+    container.scrollTo({ top: top, behavior: 'smooth' });
+  }
+
+  // Jump-nav header (fixed above the scrollable body): one button per group.
+  function renderPreviewNav() {
+    var btns = PREVIEW_GROUPS.map(function (g) {
+      return el('button', {
+        type: 'button', class: 'pv-nav-btn',
+        onclick: function () { scrollPreviewTo(g.id); }
+      }, [g.label]);
+    });
+    return el('nav', { class: 'pv-nav', 'aria-label': 'Preview sections' }, btns);
+  }
+
   function renderPreview(cfg) {
     var ramps = C.buildAllRamps(cfg);
-    return [
+    var nodes = [
       renderColorPreview(cfg, ramps),
       renderTypePreview(cfg),
       renderSpacingPreview(cfg),
@@ -678,6 +826,10 @@
       renderOpacityPreview(cfg),
       renderMotionPreview(cfg)
     ];
+    // Tag the first 8 blocks with their anchor ids (A11y/contrast is appended
+    // by the caller and tagged there, keeping PREVIEW_SECTIONS the sole order).
+    nodes.forEach(function (n, i) { n.id = PREVIEW_SECTIONS[i][0]; });
+    return nodes;
   }
 
   // ---- Live WCAG AA contrast validation panel (read-only) ----------------
@@ -747,27 +899,29 @@
     ]);
 
     var undoAttrs = {
-      type: 'button', id: 'btn-undo', text: 'Undo', 'aria-label': 'Undo (Ctrl/Cmd+Z)',
+      type: 'button', id: 'btn-undo', 'aria-label': 'Undo (Ctrl/Cmd+Z)',
       onclick: function () { store.undo(); }
     };
     if (!store.canUndo()) undoAttrs.disabled = 'disabled';
     var redoAttrs = {
-      type: 'button', id: 'btn-redo', text: 'Redo', 'aria-label': 'Redo (Ctrl/Cmd+Shift+Z)',
+      type: 'button', id: 'btn-redo', 'aria-label': 'Redo (Ctrl/Cmd+Shift+Z)',
       onclick: function () { store.redo(); }
     };
     if (!store.canRedo()) redoAttrs.disabled = 'disabled';
     var resetAllBtn = el('button', {
-      type: 'button', id: 'btn-reset-all', text: 'Reset all',
+      type: 'button', id: 'btn-reset-all',
       'aria-label': 'Reset all values to defaults',
       onclick: function () {
         if (window.confirm('모든 값을 기본값으로 되돌릴까요? 이 작업은 "되돌리기"로 복구할 수 있습니다.')) {
           store.resetAll();
         }
       }
-    });
+    }, iconLabel('reset', 'Reset all'));
 
     var actions = el('div', { class: 'toolbar-actions' }, [
-      el('button', undoAttrs), el('button', redoAttrs), resetAllBtn
+      el('button', undoAttrs, iconLabel('undo', 'Undo')),
+      el('button', redoAttrs, iconLabel('redo', 'Redo')),
+      resetAllBtn
     ]);
 
     return [titleGroup, actions];
@@ -820,6 +974,117 @@
     }
     pendingFocusId = null;
   }
+  // ---- Master-detail (web shell): domain selector + one domain at a time ----
+  // Layout has no visual preview (z-index/breakpoint are abstract), so it gets
+  // a plain value readout; Accessibility has no settings (it's derived from
+  // Color), so its contrast table rides along in the Color domain (a11y:true).
+  function renderLayoutPreview(cfg) {
+    function section(title, obj) {
+      var rows = Object.keys(obj).map(function (k) {
+        return el('div', { class: 'pv-space-row' }, [
+          el('div', { class: 'pv-space-label', text: k }),
+          el('div', { class: 'pv-kv-val', text: String(obj[k]) })
+        ]);
+      });
+      return [el('h3', { text: title })].concat(rows);
+    }
+    var kids = section('Z-index', cfg.zIndex)
+      .concat([el('div', { class: 'pv-sub-gap' })])
+      .concat(section('Breakpoint', cfg.breakpoint));
+    return el('div', { class: 'pv-block', id: 'pv-layout' }, kids);
+  }
+
+  // A comprehensive accessibility view (its own domain, split out from Color):
+  // per hue, the representative pass step at AA (4.5:1) and AAA (7:1) on both a
+  // white and a black background. Steps are derived live via C.contrastRatio.
+  function renderAccessibilityView(cfg) {
+    var ramps = C.buildAllRamps(cfg);
+    var steps = C.DEFAULT_CONFIG.steps;
+    function passStep(ramp, bg, thr, pick) {
+      var p = steps.filter(function (s) { return C.contrastRatio(ramp[String(s)], bg) >= thr; });
+      if (!p.length) return null;
+      return pick === 'min' ? Math.min.apply(null, p) : Math.max.apply(null, p);
+    }
+    function cell(step) {
+      return el('td', {}, [step == null
+        ? el('span', { class: 'badge-fail' }, ['✕ None'])
+        : el('span', { class: 'badge-pass' }, ['✓ ' + step])]);
+    }
+    var head = el('tr', {}, ['Palette', 'White · AA', 'White · AAA', 'Black · AA', 'Black · AAA']
+      .map(function (t) { return el('th', { text: t }); }));
+    var rows = cfg.color.order.map(function (hue) {
+      var r = ramps[hue];
+      return el('tr', {}, [
+        el('td', { class: 'contrast-hue-cell', text: hue }),
+        cell(passStep(r, '#FFFFFF', 4.5, 'min')),
+        cell(passStep(r, '#FFFFFF', 7, 'min')),
+        cell(passStep(r, '#000000', 4.5, 'max')),
+        cell(passStep(r, '#000000', 7, 'max'))
+      ]);
+    });
+    var table = el('table', { class: 'contrast-table' }, [el('thead', {}, [head]), el('tbody', {}, rows)]);
+    return el('div', { class: 'pv-block a11y-block' }, [
+      el('h3', { text: 'Accessibility (WCAG contrast)' }),
+      el('p', { class: 'pv-hint', text: '대비 기준 — 본문(작은 텍스트): AA 4.5:1, AAA 7:1. 큰 텍스트(18px 이상 또는 14px 볼드): AA 3:1, AAA 4.5:1.' }),
+      el('p', { class: 'pv-hint', text: '숫자 = 각 배경에서 본문으로 통과하는 대표 단계 (흰 배경 = 가장 밝은 통과 단계, 검은 배경 = 가장 어두운 통과 단계).' }),
+      table
+    ]);
+  }
+
+  var DOMAINS = [
+    { key: 'color', label: 'Color', category: 'color', preview: ['pv-color'] },
+    { key: 'typography', label: 'Typography', category: 'typography', preview: ['pv-type'] },
+    { key: 'spacing', label: 'Spacing & Sizing', category: 'spacing', preview: ['pv-spacing', 'pv-radius', 'pv-border'] },
+    { key: 'effects', label: 'Effects', category: 'effects', preview: ['pv-shadow', 'pv-opacity'] },
+    { key: 'motion', label: 'Motion', category: 'motion', preview: ['pv-motion'] },
+    { key: 'layout', label: 'Layout', category: 'layout', preview: ['pv-layout'] },
+    { key: 'a11y', label: 'Accessibility', full: 'a11y' },
+    { key: 'export', label: 'Export', full: 'export' }
+  ];
+  function domainByKey(k) { for (var i = 0; i < DOMAINS.length; i++) if (DOMAINS[i].key === k) return DOMAINS[i]; return null; }
+  function categoryByKey(k) { for (var i = 0; i < CATEGORIES.length; i++) if (CATEGORIES[i].key === k) return CATEGORIES[i]; return null; }
+  function setActiveDomain(key) { activeDomain = key; render(); }
+
+  function renderDomainNav() {
+    var btns = DOMAINS.map(function (d) {
+      return el('button', {
+        type: 'button', class: 'domain-tab' + (d.key === 'export' ? ' domain-tab-export' : ''),
+        role: 'tab', 'aria-selected': d.key === activeDomain ? 'true' : 'false',
+        onclick: function () { setActiveDomain(d.key); }
+      }, [d.label]);
+    });
+    return el('nav', { class: 'domain-nav', role: 'tablist', 'aria-label': 'Domain' }, btns);
+  }
+
+  function renderMasterDetailBody(cfg, extrasArr) {
+    app.appendChild(renderDomainNav());
+    var domain = domainByKey(activeDomain) || DOMAINS[0];
+
+    // Full-width, preview-/output-only domains (no paired settings pane):
+    // Accessibility (derived from Color) and Export.
+    if (domain.full) {
+      var content = domain.full === 'export' ? extrasArr : [renderAccessibilityView(cfg)];
+      var fullCol = el('div', { class: 'preview-col' },
+        [el('div', { class: 'preview-body', id: 'preview-col' }, content)]);
+      app.appendChild(el('div', { class: 'app-body app-body-single' }, [fullCol]));
+      return;
+    }
+
+    var byId = {};
+    renderPreview(cfg).forEach(function (n) { byId[n.id] = n; });
+    var blocks = [];
+    domain.preview.forEach(function (id) {
+      blocks.push(id === 'pv-layout' ? renderLayoutPreview(cfg) : byId[id]);
+    });
+    var previewCol = el('div', { class: 'preview-col' },
+      [el('div', { class: 'preview-body', id: 'preview-col' }, blocks.filter(Boolean))]);
+
+    var settings = renderTabbedModules(categoryByKey(domain.category), cfg);
+    var panelCol = el('div', { class: 'panel-col', id: 'panel-col' }, settings);
+
+    app.appendChild(el('div', { class: 'app-body' }, [previewCol, panelCol]));
+  }
+
   function render() {
     var cfg = store.get();
     var uiState = captureUIState();
@@ -838,12 +1103,32 @@
     var extras = rightColumnExtras(cfg);
     var extrasArr = extras == null ? [] : (Array.isArray(extras) ? extras : [extras]);
 
-    var leftCol = el('div', { class: 'panel-col', id: 'panel-col' },
-      CATEGORIES.map(function (cat) { return renderCategory(cat, cfg); }).concat(extrasArr));
+    if (layout === 'master-detail') {
+      renderMasterDetailBody(cfg, extrasArr);
+      restoreUIState(uiState);
+      return;
+    }
 
-    var rightCol = el('div', { class: 'preview-col', id: 'preview-col' }, [
-      el('h2', { text: 'Preview' })
-    ].concat(renderPreview(cfg), [renderContrastPanel(cfg)]));
+    var leftCol = el('div', { class: 'panel-col', id: 'panel-col' },
+      CATEGORIES.map(function (cat, i) { return renderCategory(cat, cfg, i === 0); }).concat(extrasArr));
+
+    var contrastBlock = renderContrastPanel(cfg);
+    contrastBlock.id = PREVIEW_SECTIONS[PREVIEW_SECTIONS.length - 1][0]; // pv-a11y
+    // Distribute the flat preview blocks into their role groups (each group is
+    // a labeled <section> that also serves as the jump-nav anchor).
+    var byId = {};
+    renderPreview(cfg).concat([contrastBlock]).forEach(function (n) { byId[n.id] = n; });
+    var groupEls = PREVIEW_GROUPS.map(function (g) {
+      var head = el('div', { class: 'pv-group-head' }, [el('h2', { class: 'pv-group-title', text: g.label })]);
+      var members = g.sections.map(function (sid) { return byId[sid]; }).filter(Boolean);
+      return el('section', { class: 'pv-group', id: g.id }, [head].concat(members));
+    });
+    // Preview column = a NON-scrolling flex wrapper holding a fixed nav header
+    // over a scrollable body. The body keeps id="preview-col" (the scroll
+    // element captureUIState/restoreUIState track, and the anchor scroll
+    // target), so the nav can't scroll away the way a sticky child did.
+    var previewBody = el('div', { class: 'preview-body', id: 'preview-col' }, groupEls);
+    var rightCol = el('div', { class: 'preview-col' }, [renderPreviewNav(), previewBody]);
 
     // #app is a flex column: a tab bar (shown only on narrow viewports via
     // CSS) over an .app-body grid that holds the two columns. data-tab drives
