@@ -393,10 +393,24 @@
   // keystroke of a rename. Index stays stable across re-renders as long as
   // rows aren't added/removed, which is exactly when focus needs to survive
   // (plain value edits, and key edits prior to the commit that revalidates).
+  // Per-row value previews (like the color step's swatch): a small visual of
+  // what each token IS, shown at the front of the row for the visual token
+  // types. Recomputed on every edit via the normal re-render.
+  function kvPvBox(style, extra) { return el('div', { class: 'kv-pv kv-pv-box' + (extra ? ' ' + extra : ''), style: style }); }
+  var KV_PREVIEWS = {
+    space: function (v) { return el('div', { class: 'kv-pv kv-pv-track' }, [el('div', { class: 'kv-pv-bar', style: 'width:' + Math.max(1, Math.min(parseFloat(v) || 0, 30)) + 'px' })]); },
+    radius: function (v) { return kvPvBox('border-radius:' + v); },
+    borderWidth: function (v) { return kvPvBox('border-style:solid;border-width:' + v, 'kv-pv-hollow'); },
+    opacity: function (v) { return el('div', { class: 'kv-pv kv-pv-checker' }, [el('div', { class: 'kv-pv-fill', style: 'opacity:' + v })]); },
+    shadow: function (v) { return kvPvBox('box-shadow:' + v, 'kv-pv-shadow'); },
+    fontWeight: function (v) { return el('div', { class: 'kv-pv kv-pv-weight', style: 'font-weight:' + v, text: 'Ag' }); }
+  };
+
   function renderKVGroup(groupKey, opts) {
     opts = opts || {};
     var labelText = opts.label || groupKey;
     var placeholder = opts.placeholder || '';
+    var pvFn = KV_PREVIEWS[groupKey];
     var cfg = store.get();
     var group = cfg[groupKey] || {};
     var keys = Object.keys(group);
@@ -464,7 +478,8 @@
       // alert=assertive vs polite) so role="alert" alone is kept.
       var msg = el('span', { id: msgId, class: 'kv-msg', role: 'alert' });
 
-      return el('div', { class: 'kv-row' }, [keyInput, valInput, removeBtn, msg]);
+      var pv = pvFn ? pvFn(group[key]) : null;
+      return el('div', { class: 'kv-row' }, (pv ? [pv] : []).concat([keyInput, valInput, removeBtn, msg]));
     });
 
     var addBtn = el('button', {

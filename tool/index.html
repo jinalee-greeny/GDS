@@ -269,14 +269,29 @@
   .modular-scale .field { display: flex; flex-direction: column; gap: 2px; }
   .modular-scale label { font-size: 14px; color: var(--muted); }
   .modular-scale input { width: 78px; font-variant-numeric: tabular-nums; }
-  .kv-group-body { display: flex; flex-direction: column; gap: 6px; }
-  .kv-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 4px 0; border-top: 1px solid var(--hairline); }
+  .kv-group-body { display: flex; flex-direction: column; gap: 8px; }
+  .kv-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 0; border-top: 1px solid var(--hairline); }
   .kv-row:first-child { border-top: none; }
   .kv-row input[type="text"] { padding: 8px 12px; border: 1px solid var(--border-strong); border-radius: 8px; font: inherit; background: var(--surface); color: var(--text); }
   .kv-row .kv-del-btn { flex: 0 0 auto; padding: 6px 9px; color: var(--muted); }
   .kv-row .kv-del-btn:hover { color: var(--text); }
-  .kv-row .kv-key { flex: 0 1 110px; min-width: 70px; }
-  .kv-row .kv-val { flex: 1 1 160px; min-width: 100px; }
+  .kv-row .kv-key { flex: 0 1 100px; min-width: 68px; }
+  .kv-row .kv-val { flex: 1 1 140px; min-width: 96px; }
+  /* Per-row value preview (parallels the color step swatch) */
+  .kv-pv { flex: 0 0 auto; width: 30px; height: 30px; }
+  .kv-pv-box { border: 1px solid var(--border); border-radius: 6px; background: var(--accent); }
+  .kv-pv-hollow { background: var(--surface); border-color: var(--accent); }
+  .kv-pv-shadow { background: var(--surface); border: 1px solid var(--border); }
+  .kv-pv-track { display: flex; align-items: center; }
+  .kv-pv-bar { height: 8px; background: var(--accent); border-radius: 2px; min-width: 1px; }
+  .kv-pv-checker {
+    border: 1px solid var(--border); border-radius: 6px; overflow: hidden;
+    background-image: linear-gradient(45deg, #c8ccd2 25%, transparent 25%), linear-gradient(-45deg, #c8ccd2 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #c8ccd2 75%), linear-gradient(-45deg, transparent 75%, #c8ccd2 75%);
+    background-size: 8px 8px; background-position: 0 0, 0 4px, 4px -4px, -4px 0;
+  }
+  .kv-pv-fill { width: 100%; height: 100%; background: var(--accent); }
+  .kv-pv-weight { display: flex; align-items: center; justify-content: center; font-size: 14px; color: var(--text); border: 1px solid var(--border); border-radius: 6px; background: var(--surface); }
   .kv-msg { flex-basis: 100%; font-size: 14px; color: #b91c1c; }
   .kv-add-row { margin-top: 4px; }
   .pv-block { border: 1px solid var(--border); border-radius: var(--radius-card); margin-bottom: 20px; padding: 24px; background: var(--surface); scroll-margin-top: 16px; }
@@ -1137,10 +1152,24 @@
   // keystroke of a rename. Index stays stable across re-renders as long as
   // rows aren't added/removed, which is exactly when focus needs to survive
   // (plain value edits, and key edits prior to the commit that revalidates).
+  // Per-row value previews (like the color step's swatch): a small visual of
+  // what each token IS, shown at the front of the row for the visual token
+  // types. Recomputed on every edit via the normal re-render.
+  function kvPvBox(style, extra) { return el('div', { class: 'kv-pv kv-pv-box' + (extra ? ' ' + extra : ''), style: style }); }
+  var KV_PREVIEWS = {
+    space: function (v) { return el('div', { class: 'kv-pv kv-pv-track' }, [el('div', { class: 'kv-pv-bar', style: 'width:' + Math.max(1, Math.min(parseFloat(v) || 0, 30)) + 'px' })]); },
+    radius: function (v) { return kvPvBox('border-radius:' + v); },
+    borderWidth: function (v) { return kvPvBox('border-style:solid;border-width:' + v, 'kv-pv-hollow'); },
+    opacity: function (v) { return el('div', { class: 'kv-pv kv-pv-checker' }, [el('div', { class: 'kv-pv-fill', style: 'opacity:' + v })]); },
+    shadow: function (v) { return kvPvBox('box-shadow:' + v, 'kv-pv-shadow'); },
+    fontWeight: function (v) { return el('div', { class: 'kv-pv kv-pv-weight', style: 'font-weight:' + v, text: 'Ag' }); }
+  };
+
   function renderKVGroup(groupKey, opts) {
     opts = opts || {};
     var labelText = opts.label || groupKey;
     var placeholder = opts.placeholder || '';
+    var pvFn = KV_PREVIEWS[groupKey];
     var cfg = store.get();
     var group = cfg[groupKey] || {};
     var keys = Object.keys(group);
@@ -1208,7 +1237,8 @@
       // alert=assertive vs polite) so role="alert" alone is kept.
       var msg = el('span', { id: msgId, class: 'kv-msg', role: 'alert' });
 
-      return el('div', { class: 'kv-row' }, [keyInput, valInput, removeBtn, msg]);
+      var pv = pvFn ? pvFn(group[key]) : null;
+      return el('div', { class: 'kv-row' }, (pv ? [pv] : []).concat([keyInput, valInput, removeBtn, msg]));
     });
 
     var addBtn = el('button', {
