@@ -28,6 +28,8 @@ report.append("| 팔레트 | 흰 배경에 AA 통과 최소 step | 검은 배경
 report.append("|---|---|---|")
 for n in color_names:
     r=ramp(n); ks=list(r.keys())
+    # alpha ramps carry 8-digit #RRGGBBAA; contrast vs a solid bg is meaningless — skip
+    if any(isinstance(r[s],str) and len(r[s])==9 for s in ks): continue
     on_white=[s for s in ks if ratio(r[s],white)>=4.5]
     on_black=[s for s in ks if ratio(r[s],black)>=4.5]
     ow=on_white[0] if on_white else "—"   # order-based: first (lightest) passing
@@ -131,7 +133,7 @@ tokens/tokens.json   ← 여기만 관리 (SSOT)
 
 ## 네이밍 규칙
 
-- **컬러**: 숫자 스케일 `color.{{hue}}.{{50–950}}` (예: `color.blue.500`)
+- **컬러**: 자유 편집 스케일. 다단계는 `color.{{scale}}.{{step}}` (예: `color.blue.500`), 단일 step은 flat `color.{{scale}}` (예: `color.white`)
 - **크기류**: T단계 명칭 (예: `radius.md`, `font.size.lg`)
 - **간격**: 4px 그리드 numeric (예: `space.4` = 16px)
 
@@ -139,7 +141,7 @@ tokens/tokens.json   ← 여기만 관리 (SSOT)
 
 | 카테고리 | 스케일 |
 |---|---|
-| Color | gray + red·orange·amber·green·teal·blue·violet·pink × 50–950, white/black |
+| Color | {" · ".join(color_names)} (자유 편집 스케일) |
 | Font family | sans · serif · mono 세 슬롯 모두 Pretendard |
 | Font size | xs–6xl (12–60px, 최소 12 · base 16, 정수 커브) |
 | Font weight | regular·medium·semibold·bold |

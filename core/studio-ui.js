@@ -1041,7 +1041,7 @@
     }
     var head = el('tr', {}, ['Palette', 'White · AA', 'White · AAA', 'Black · AA', 'Black · AAA']
       .map(function (t) { return el('th', { text: t }); }));
-    var rows = cfg.color.order.map(function (hue) {
+    var rows = cfg.color.order.filter(function (hue) { return !C.isAlphaRamp(ramps[hue]); }).map(function (hue) {
       var r = ramps[hue];
       return el('tr', {}, [
         el('td', { class: 'contrast-hue-cell', text: hue }),

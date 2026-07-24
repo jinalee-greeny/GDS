@@ -14,7 +14,7 @@
 - **플랫폼**: 무관(platform-agnostic).
 
 ## 확정된 파운데이션 값
-- **Color**: OKLCH 기반 램프. gray + red·orange·amber·green·teal·blue·violet·pink, 각 50–950 + white/black.
+- **Color**: 자유 편집(매뉴얼) 스케일 모델. `color.order`(스케일 순서) + `color.scales`(스케일별 step→hex). 스케일/step 추가·삭제·이름변경·값편집 자유. 초기값: black·white(단일 step=flat) + black-alpha·white-alpha(#RRGGBBAA) + gray·red·blue·green(다단계). 알파 스케일은 8자리 hex라 대비 계산에서 제외.
 - **Font family**: sans/serif/mono 세 슬롯 모두 Pretendard (교체 가능한 슬롯).
 - **Font size**: xs–6xl = 12/14/16/18/20/24/30/36/48/60px (최소 12, base=md 16, 정수 커브).
 - **Font weight**: regular400 / medium500 / semibold600 / bold700.
@@ -73,7 +73,7 @@ python3 build_apps.py     # ② core/* + 템플릿을 조립해 tool/index.html,
 
 ## 검증 상태 (통과)
 - 참조 무결성: 원시값만, 깨진 참조 0건.
-- WCAG AA(4.5:1): 흰 배경 본문 안전 최소 step = 각 hue 600(green/teal는 700), 다크 배경 최대 step = 500(green/teal 600).
+- WCAG AA(4.5:1): 불투명 스케일만 대비 검증(알파 스케일 제외). 기본값 기준 흰 배경 통과 최소 step = gray/red/blue 600, green 700; 검은 배경 최대 step = gray/red/blue 500, green 600.
 
 ## 다음 단계 후보 (미완)
 1. **Semantic 레이어**: primitive를 alias한 `color.semantic.primary` 등 + 라이트/다크 테마 세트.

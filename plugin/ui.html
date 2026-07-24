@@ -720,9 +720,16 @@
   // Step names are now arbitrary (manual model), so pick by ORDER not numeric
   // value: on white the first passing step (lightest), on black the last
   // passing step (darkest). Robust to single-step scales and non-numeric names.
+  // An alpha ramp carries 8-digit #RRGGBBAA values. Contrast against a solid bg
+  // is meaningless for these (the real ratio depends on what they composite over),
+  // so they're excluded from the contrast report / a11y table.
+  function isAlphaRamp(ramp) {
+    return Object.keys(ramp).some(function (s) { return typeof ramp[s] === 'string' && ramp[s].length === 9; });
+  }
+
   function contrastReport(cfg) {
     var ramps = buildAllRamps(cfg);
-    return cfg.color.order.map(function (name) {
+    return cfg.color.order.filter(function (name) { return !isAlphaRamp(ramps[name]); }).map(function (name) {
       var ramp = ramps[name];
       var steps = Object.keys(ramp);
       var onWhite = steps.filter(function (s) { return contrastRatio(ramp[s], '#FFFFFF') >= 4.5; });
@@ -771,7 +778,7 @@
   var TokenCore = { pyRound: pyRound, oklchToSrgb: oklchToSrgb, hexof: hexof,
     DEFAULT_CONFIG: DEFAULT_CONFIG, cloneConfig: cloneConfig,
     buildRamp: buildRamp, buildAllRamps: buildAllRamps, toCSS: toCSS, toDTCG: toDTCG, toTailwind: toTailwind, toFigma: toFigma,
-    relLuminance: relLuminance, contrastRatio: contrastRatio, contrastReport: contrastReport, createStore: createStore };
+    relLuminance: relLuminance, contrastRatio: contrastRatio, contrastReport: contrastReport, isAlphaRamp: isAlphaRamp, createStore: createStore };
   root.TokenCore = TokenCore;
   if (typeof module !== 'undefined' && module.exports) module.exports = TokenCore;
 })(typeof window !== 'undefined' ? window : globalThis);
@@ -1820,7 +1827,7 @@
     }
     var head = el('tr', {}, ['Palette', 'White · AA', 'White · AAA', 'Black · AA', 'Black · AAA']
       .map(function (t) { return el('th', { text: t }); }));
-    var rows = cfg.color.order.map(function (hue) {
+    var rows = cfg.color.order.filter(function (hue) { return !C.isAlphaRamp(ramps[hue]); }).map(function (hue) {
       var r = ramps[hue];
       return el('tr', {}, [
         el('td', { class: 'contrast-hue-cell', text: hue }),

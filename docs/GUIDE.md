@@ -16,7 +16,7 @@ tokens/tokens.json   ← 여기만 관리 (SSOT)
 
 ## 네이밍 규칙
 
-- **컬러**: 숫자 스케일 `color.{hue}.{50–950}` (예: `color.blue.500`)
+- **컬러**: 자유 편집 스케일. 다단계는 `color.{scale}.{step}` (예: `color.blue.500`), 단일 step은 flat `color.{scale}` (예: `color.white`)
 - **크기류**: T단계 명칭 (예: `radius.md`, `font.size.lg`)
 - **간격**: 4px 그리드 numeric (예: `space.4` = 16px)
 
@@ -24,7 +24,7 @@ tokens/tokens.json   ← 여기만 관리 (SSOT)
 
 | 카테고리 | 스케일 |
 |---|---|
-| Color | gray + red·orange·amber·green·teal·blue·violet·pink × 50–950, white/black |
+| Color | black · white · black-alpha · white-alpha · gray · red · blue · green (자유 편집 스케일) |
 | Font family | sans · serif · mono 세 슬롯 모두 Pretendard |
 | Font size | xs–6xl (12–60px, 최소 12 · base 16, 정수 커브) |
 | Font weight | regular·medium·semibold·bold |
@@ -64,8 +64,6 @@ tokens/tokens.json   ← 여기만 관리 (SSOT)
 |---|---|---|
 | black | base | — |
 | white | — | base |
-| black-alpha | 5 | — |
-| white-alpha | — | 80 |
 | gray | 600 | 500 |
 | red | 600 | 500 |
 | blue | 600 | 500 |
