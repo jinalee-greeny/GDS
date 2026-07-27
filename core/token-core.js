@@ -63,8 +63,8 @@
     },
     fontFamily: {
       sans: "Pretendard, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
-      serif: "Pretendard, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
-      mono: "Pretendard, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
+      serif: "'Nanum Myeongjo', ui-serif, Georgia, Cambria, 'Times New Roman', serif",
+      mono: "ui-monospace, SFMono-Regular, 'JetBrains Mono', Menlo, Consolas, monospace"
     },
     fontSize: {'xs':'12px','sm':'14px','md':'16px','lg':'18px','xl':'20px',
                '2xl':'24px','3xl':'30px','4xl':'36px','5xl':'48px','6xl':'60px'},

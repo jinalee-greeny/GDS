@@ -72,8 +72,8 @@ module.exports = {
       },
       "fontFamily": {
         "sans": "Pretendard, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
-        "serif": "Pretendard, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
-        "mono": "Pretendard, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
+        "serif": "'Nanum Myeongjo', ui-serif, Georgia, Cambria, 'Times New Roman', serif",
+        "mono": "ui-monospace, SFMono-Regular, 'JetBrains Mono', Menlo, Consolas, monospace"
       },
       "fontSize": {
         "xs": "12px",

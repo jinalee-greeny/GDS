@@ -407,6 +407,39 @@
     fontWeight: function (v) { return el('div', { class: 'kv-pv kv-pv-weight', style: 'font-weight:' + v, text: 'Ag' }); }
   };
 
+  // Curated font-stack presets for the fontFamily rows' quick-pick dropdown.
+  // Offline-friendly: Pretendard (bundled) + system/web-safe families so the
+  // Typography preview actually reflects the choice. Users can still type a
+  // fully custom stack into the value field.
+  var FONT_PRESETS = [
+    { group: 'Sans', items: [
+      { label: 'Pretendard (Korean)', value: "Pretendard, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" },
+      { label: 'Apple SD Gothic Neo (Korean)', value: "'Apple SD Gothic Neo', Pretendard, system-ui, sans-serif" },
+      { label: 'System UI', value: "system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" },
+      { label: 'Helvetica / Arial', value: "'Helvetica Neue', Helvetica, Arial, sans-serif" }
+    ] },
+    { group: 'Serif', items: [
+      { label: 'Nanum Myeongjo (Korean)', value: "'Nanum Myeongjo', ui-serif, Georgia, serif" },
+      { label: 'Georgia', value: "Georgia, Cambria, 'Times New Roman', Times, serif" },
+      { label: 'System serif', value: "ui-serif, Georgia, Cambria, 'Times New Roman', serif" }
+    ] },
+    { group: 'Mono', items: [
+      { label: 'System mono', value: "ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" },
+      { label: 'JetBrains Mono', value: "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace" },
+      { label: 'D2Coding (Korean)', value: "'D2Coding', ui-monospace, SFMono-Regular, Menlo, monospace" }
+    ] }
+  ];
+  // A quick-pick <select> that fills a fontFamily row's value from FONT_PRESETS.
+  function fontPresetSelect(groupKey, key) {
+    var groups = FONT_PRESETS.map(function (g) {
+      return el('optgroup', { label: g.group }, g.items.map(function (p) { return el('option', { value: p.value }, [p.label]); }));
+    });
+    return el('select', {
+      class: 'kv-font-preset', 'aria-label': 'Font preset for ' + key,
+      onchange: function (e) { if (e.target.value) store.setPath([groupKey, key], e.target.value); }
+    }, [el('option', { value: '' }, ['프리셋…'])].concat(groups));
+  }
+
   function renderKVGroup(groupKey, opts) {
     opts = opts || {};
     var labelText = opts.label || groupKey;
@@ -480,7 +513,9 @@
       var msg = el('span', { id: msgId, class: 'kv-msg', role: 'alert' });
 
       var pv = pvFn ? pvFn(group[key]) : null;
-      return el('div', { class: 'kv-row' }, (pv ? [pv] : []).concat([keyInput, valInput, removeBtn, msg]));
+      var preset = groupKey === 'fontFamily' ? fontPresetSelect(groupKey, key) : null;
+      return el('div', { class: 'kv-row' },
+        (pv ? [pv] : []).concat([keyInput, valInput]).concat(preset ? [preset] : []).concat([removeBtn, msg]));
     });
 
     var addBtn = el('button', {

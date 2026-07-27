@@ -235,11 +235,11 @@
       "type": "fontFamilies"
     },
     "serif": {
-      "value": "Pretendard, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+      "value": "'Nanum Myeongjo', ui-serif, Georgia, Cambria, 'Times New Roman', serif",
       "type": "fontFamilies"
     },
     "mono": {
-      "value": "Pretendard, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+      "value": "ui-monospace, SFMono-Regular, 'JetBrains Mono', Menlo, Consolas, monospace",
       "type": "fontFamilies"
     }
   },

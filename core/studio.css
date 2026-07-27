@@ -279,6 +279,7 @@
   .kv-row .kv-del-btn:hover { color: var(--text); }
   .kv-row .kv-key { flex: 0 1 100px; min-width: 68px; }
   .kv-row .kv-val { flex: 1 1 140px; min-width: 96px; }
+  .kv-row .kv-font-preset { flex: 0 0 auto; max-width: 130px; padding: 8px 10px; border: 1px solid var(--border-strong); border-radius: 8px; font: inherit; background: var(--surface); color: var(--muted); }
   /* Per-row value preview (parallels the color step swatch) */
   .kv-pv { flex: 0 0 auto; width: 30px; height: 30px; }
   .kv-pv-box { border: 1px solid var(--border); border-radius: 6px; background: var(--accent); }
