@@ -1112,29 +1112,37 @@
   var SEM_COLOR_GROUPS = [
     { label: 'Surface · 배경 / 표면', roles: {
       bg: '앱 최상위 배경', surface: '카드·패널 기본 표면',
-      'surface-sunken': '입력·코드 등 오목한 영역', 'surface-raised': '떠 있는 표면(팝오버 등)' } },
+      'surface-sunken': '입력·코드 등 오목한 영역', 'surface-raised': '떠 있는 표면(팝오버 등)',
+      'surface-hover': 'hover 상태 표면', overlay: '모달 뒤 스크림·오버레이' } },
     { label: 'Text · 텍스트', roles: {
       text: '기본 본문 텍스트', 'text-muted': '보조 텍스트',
-      'text-subtle': '가장 약한 텍스트·플레이스홀더', 'text-inverse': '어둡거나 강조된 배경 위 텍스트' } },
+      'text-subtle': '가장 약한 텍스트·플레이스홀더', 'text-inverse': '어둡거나 강조된 배경 위 텍스트',
+      'text-link': '링크 텍스트', 'text-disabled': '비활성 텍스트' } },
     { label: 'Border · 테두리', roles: {
-      border: '기본 구분선·테두리', 'border-strong': '강조 테두리·입력 포커스' } },
+      border: '기본 구분선·테두리', 'border-strong': '강조 테두리',
+      'border-subtle': '약한 구분선', 'border-focus': '포커스 링·활성 테두리' } },
     { label: 'Brand · 브랜드 / 상호작용', roles: {
       primary: '주요 버튼·링크·강조', 'primary-hover': 'primary hover 상태',
-      'primary-active': 'primary 눌림(active) 상태', 'primary-fg': 'primary 위 텍스트·아이콘', accent: '보조 강조색' } },
+      'primary-active': 'primary 눌림(active) 상태', 'primary-fg': 'primary 위 텍스트·아이콘',
+      'primary-subtle': 'primary 옅은 배경(배너·태그)', 'focus-ring': '포커스 링', accent: '보조 강조색' } },
     { label: 'Status · 상태', roles: {
-      danger: '위험·삭제·오류', 'danger-fg': 'danger 위 텍스트',
-      success: '성공·완료', 'success-fg': 'success 위 텍스트',
-      info: '정보·안내', 'info-fg': 'info 위 텍스트' } }
+      danger: '위험·삭제·오류', 'danger-fg': 'danger 위 텍스트', 'danger-subtle': 'danger 옅은 배경',
+      success: '성공·완료', 'success-fg': 'success 위 텍스트', 'success-subtle': 'success 옅은 배경',
+      info: '정보·안내', 'info-fg': 'info 위 텍스트', 'info-subtle': 'info 옅은 배경' } }
   ];
   var SEM_USE = {
     text: { display: '초대형 디스플레이·히어로', h1: '페이지 제목 (H1)', h2: '주요 섹션 제목 (H2)',
       h3: '하위 섹션 제목 (H3)', title: '카드·블록 제목', 'body-lg': '큰 본문·리드 문단',
       body: '기본 본문', 'body-sm': '작은 본문·보조 문단', label: '폼 라벨·버튼 텍스트',
       caption: '캡션·메타 정보', overline: '오버라인·카테고리(대문자 권장)', code: '인라인 코드·모노' },
-    radius: { control: '버튼·인풋·셀렉트', card: '카드·패널·모달', pill: '배지·토글·칩(완전 둥근)' },
-    shadow: { card: '카드 기본 그림자', popover: '드롭다운·팝오버', modal: '모달·다이얼로그' },
-    space: { 'inset-sm': '좁은 안쪽 패딩', 'inset-md': '기본 안쪽 패딩', 'inset-lg': '넓은 안쪽 패딩',
-      'gap-sm': '좁은 요소 간격', 'gap-md': '기본 요소 간격', 'gap-lg': '넓은 요소 간격' }
+    radius: { sharp: '각진 요소(표·코드블록)', field: '작은 인풋·태그·칩', control: '버튼·인풋·셀렉트',
+      card: '카드·패널', modal: '모달·시트·큰 컨테이너', pill: '토글·배지·아바타(완전 둥근)' },
+    shadow: { subtle: '미묘한 구분·hover', card: '카드 기본 그림자', popover: '드롭다운·팝오버',
+      modal: '모달·다이얼로그', overlay: '대형 오버레이·시트' },
+    space: { 'inset-xs': '아주 좁은 안쪽 패딩', 'inset-sm': '좁은 안쪽 패딩', 'inset-md': '기본 안쪽 패딩',
+      'inset-lg': '넓은 안쪽 패딩', 'inset-xl': '아주 넓은 안쪽 패딩',
+      'gap-xs': '아주 좁은 간격', 'gap-sm': '좁은 요소 간격', 'gap-md': '기본 요소 간격',
+      'gap-lg': '넓은 요소 간격', 'gap-xl': '아주 넓은 간격', section: '섹션·블록 간 간격' }
   };
   // Editable role name with a usage caption beneath it (the "맥락").
   function semNameCol(role, use, onrename) {
