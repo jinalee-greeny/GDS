@@ -110,12 +110,18 @@
         }
       },
       text: {
-        display: {size:'{fontSize.5xl}', weight:'{fontWeight.bold}', lineHeight:'{lineHeight.tight}', letterSpacing:'{letterSpacing.tight}'},
-        heading: {size:'{fontSize.3xl}', weight:'{fontWeight.bold}', lineHeight:'{lineHeight.snug}', letterSpacing:'{letterSpacing.normal}'},
-        title:   {size:'{fontSize.xl}', weight:'{fontWeight.semibold}', lineHeight:'{lineHeight.snug}', letterSpacing:'{letterSpacing.normal}'},
-        body:    {size:'{fontSize.md}', weight:'{fontWeight.regular}', lineHeight:'{lineHeight.normal}', letterSpacing:'{letterSpacing.normal}'},
-        label:   {size:'{fontSize.sm}', weight:'{fontWeight.medium}', lineHeight:'{lineHeight.normal}', letterSpacing:'{letterSpacing.normal}'},
-        caption: {size:'{fontSize.xs}', weight:'{fontWeight.regular}', lineHeight:'{lineHeight.normal}', letterSpacing:'{letterSpacing.normal}'}
+        display:  {size:'{fontSize.6xl}', weight:'{fontWeight.bold}',     lineHeight:'{lineHeight.none}',    letterSpacing:'{letterSpacing.tighter}'},
+        h1:       {size:'{fontSize.4xl}', weight:'{fontWeight.bold}',     lineHeight:'{lineHeight.tight}',   letterSpacing:'{letterSpacing.tight}'},
+        h2:       {size:'{fontSize.3xl}', weight:'{fontWeight.bold}',     lineHeight:'{lineHeight.snug}',    letterSpacing:'{letterSpacing.normal}'},
+        h3:       {size:'{fontSize.2xl}', weight:'{fontWeight.semibold}', lineHeight:'{lineHeight.snug}',    letterSpacing:'{letterSpacing.normal}'},
+        title:    {size:'{fontSize.xl}',  weight:'{fontWeight.semibold}', lineHeight:'{lineHeight.snug}',    letterSpacing:'{letterSpacing.normal}'},
+        'body-lg':{size:'{fontSize.lg}',  weight:'{fontWeight.regular}',  lineHeight:'{lineHeight.relaxed}', letterSpacing:'{letterSpacing.normal}'},
+        body:     {size:'{fontSize.md}',  weight:'{fontWeight.regular}',  lineHeight:'{lineHeight.normal}',  letterSpacing:'{letterSpacing.normal}'},
+        'body-sm':{size:'{fontSize.sm}',  weight:'{fontWeight.regular}',  lineHeight:'{lineHeight.normal}',  letterSpacing:'{letterSpacing.normal}'},
+        label:    {size:'{fontSize.sm}',  weight:'{fontWeight.medium}',   lineHeight:'{lineHeight.normal}',  letterSpacing:'{letterSpacing.normal}'},
+        caption:  {size:'{fontSize.xs}',  weight:'{fontWeight.regular}',  lineHeight:'{lineHeight.normal}',  letterSpacing:'{letterSpacing.normal}'},
+        overline: {size:'{fontSize.xs}',  weight:'{fontWeight.semibold}', lineHeight:'{lineHeight.normal}',  letterSpacing:'{letterSpacing.wider}'},
+        code:     {size:'{fontSize.sm}',  weight:'{fontWeight.regular}',  lineHeight:'{lineHeight.normal}',  letterSpacing:'{letterSpacing.normal}'}
       },
       radius: {control:'{radius.md}', card:'{radius.lg}', pill:'{radius.full}'},
       shadow: {card:'{shadow.md}', popover:'{shadow.lg}', modal:'{shadow.xl}'},

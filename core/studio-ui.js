@@ -1127,8 +1127,10 @@
       info: '정보·안내', 'info-fg': 'info 위 텍스트' } }
   ];
   var SEM_USE = {
-    text: { display: '대형 히어로 타이틀', heading: '페이지·섹션 제목', title: '카드·블록 제목',
-      body: '기본 본문', label: '폼 라벨·버튼 텍스트', caption: '캡션·보조 설명' },
+    text: { display: '초대형 디스플레이·히어로', h1: '페이지 제목 (H1)', h2: '주요 섹션 제목 (H2)',
+      h3: '하위 섹션 제목 (H3)', title: '카드·블록 제목', 'body-lg': '큰 본문·리드 문단',
+      body: '기본 본문', 'body-sm': '작은 본문·보조 문단', label: '폼 라벨·버튼 텍스트',
+      caption: '캡션·메타 정보', overline: '오버라인·카테고리(대문자 권장)', code: '인라인 코드·모노' },
     radius: { control: '버튼·인풋·셀렉트', card: '카드·패널·모달', pill: '배지·토글·칩(완전 둥근)' },
     shadow: { card: '카드 기본 그림자', popover: '드롭다운·팝오버', modal: '모달·다이얼로그' },
     space: { 'inset-sm': '좁은 안쪽 패딩', 'inset-md': '기본 안쪽 패딩', 'inset-lg': '넓은 안쪽 패딩',
