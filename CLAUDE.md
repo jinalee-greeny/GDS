@@ -8,7 +8,7 @@
 현재 단계: **Foundations(primitive) 레이어 완성 (v1)**.
 
 ## 확정된 아키텍처 결정
-- **SSOT**: `tokens/tokens.json` (DTCG 정렬) 하나만 관리 → 나머지 산출물은 여기서 파생.
+- **SSOT**: 토큰 값의 실제 원본은 `build_tokens.py` 내부 딕셔너리(+ 듀얼로 `core/token-core.js`의 `DEFAULT_CONFIG`, 바이트 일치 유지). `tokens/tokens.json`(DTCG)은 여기서 파생된 산출물이지 SSOT가 아님. 나머지 산출물도 전부 파생.
 - **레이어**: 이번엔 primitive 한 층만. semantic(primary/surface/danger 등)은 다음 단계에서 이 위에 얹음.
 - **네이밍**: 컬러 = 숫자 스케일(`color.blue.500`), 크기류 = T단계(`radius.md`), 간격 = 4px numeric(`space.4`).
 - **플랫폼**: 무관(platform-agnostic).
