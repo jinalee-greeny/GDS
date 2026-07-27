@@ -82,7 +82,45 @@
     breakpoint: {sm:'640px',md:'768px',lg:'1024px',xl:'1280px','2xl':'1536px'},
     duration: {fast:'100ms',base:'200ms',slow:'300ms',slower:'500ms'},
     easing: {standard:'cubic-bezier(0.4,0,0.2,1)',decelerate:'cubic-bezier(0,0,0.2,1)',
-             accelerate:'cubic-bezier(0.4,0,1,1)',linear:'linear'}
+             accelerate:'cubic-bezier(0.4,0,1,1)',linear:'linear'},
+    // Semantic layer: role -> primitive REFERENCE ("{group.path}"). Resolved at
+    // export/preview time via resolveRef. Only `color` is theme-varying (light/dark);
+    // text/radius/shadow/space are single sets. Roles are user-editable like scales.
+    semantic: {
+      color: {
+        light: {
+          bg:'{color.white}', surface:'{color.gray.50}', 'surface-sunken':'{color.gray.100}', 'surface-raised':'{color.white}',
+          text:'{color.gray.900}', 'text-muted':'{color.gray.600}', 'text-subtle':'{color.gray.500}', 'text-inverse':'{color.white}',
+          border:'{color.gray.200}', 'border-strong':'{color.gray.300}',
+          primary:'{color.blue.600}', 'primary-hover':'{color.blue.700}', 'primary-active':'{color.blue.800}', 'primary-fg':'{color.white}',
+          danger:'{color.red.600}', 'danger-fg':'{color.white}',
+          success:'{color.green.600}', 'success-fg':'{color.white}',
+          info:'{color.blue.500}', 'info-fg':'{color.white}',
+          accent:'{color.blue.500}'
+        },
+        dark: {
+          bg:'{color.gray.900}', surface:'{color.gray.800}', 'surface-sunken':'{color.gray.900}', 'surface-raised':'{color.gray.800}',
+          text:'{color.gray.50}', 'text-muted':'{color.gray.400}', 'text-subtle':'{color.gray.500}', 'text-inverse':'{color.gray.900}',
+          border:'{color.gray.700}', 'border-strong':'{color.gray.600}',
+          primary:'{color.blue.500}', 'primary-hover':'{color.blue.400}', 'primary-active':'{color.blue.300}', 'primary-fg':'{color.white}',
+          danger:'{color.red.500}', 'danger-fg':'{color.white}',
+          success:'{color.green.500}', 'success-fg':'{color.white}',
+          info:'{color.blue.400}', 'info-fg':'{color.gray.900}',
+          accent:'{color.blue.400}'
+        }
+      },
+      text: {
+        display: {size:'{fontSize.5xl}', weight:'{fontWeight.bold}', lineHeight:'{lineHeight.tight}', letterSpacing:'{letterSpacing.tight}'},
+        heading: {size:'{fontSize.3xl}', weight:'{fontWeight.bold}', lineHeight:'{lineHeight.snug}', letterSpacing:'{letterSpacing.normal}'},
+        title:   {size:'{fontSize.xl}', weight:'{fontWeight.semibold}', lineHeight:'{lineHeight.snug}', letterSpacing:'{letterSpacing.normal}'},
+        body:    {size:'{fontSize.md}', weight:'{fontWeight.regular}', lineHeight:'{lineHeight.normal}', letterSpacing:'{letterSpacing.normal}'},
+        label:   {size:'{fontSize.sm}', weight:'{fontWeight.medium}', lineHeight:'{lineHeight.normal}', letterSpacing:'{letterSpacing.normal}'},
+        caption: {size:'{fontSize.xs}', weight:'{fontWeight.regular}', lineHeight:'{lineHeight.normal}', letterSpacing:'{letterSpacing.normal}'}
+      },
+      radius: {control:'{radius.md}', card:'{radius.lg}', pill:'{radius.full}'},
+      shadow: {card:'{shadow.md}', popover:'{shadow.lg}', modal:'{shadow.xl}'},
+      space:  {'inset-sm':'{space.2}', 'inset-md':'{space.4}', 'inset-lg':'{space.6}', 'gap-sm':'{space.2}', 'gap-md':'{space.4}', 'gap-lg':'{space.8}'}
+    }
   };
 
   function cloneConfig(cfg) { return JSON.parse(JSON.stringify(cfg)); }
@@ -108,6 +146,52 @@
   function colorEntries(ramp) {
     var keys = Object.keys(ramp);
     return { single: keys.length === 1, keys: keys };
+  }
+
+  // Resolve a semantic reference "{group.path}" to its primitive value.
+  // Returns null if the string isn't a reference or the target is missing/non-leaf
+  // (a broken ref — surfaced as a warning badge in the editor).
+  function resolveRef(cfg, ref) {
+    if (typeof ref !== 'string') return null;
+    var m = /^\{(.+)\}$/.exec(ref.trim());
+    if (!m) return null;
+    var parts = m[1].split('.');
+    if (parts[0] === 'color') {
+      var scale = cfg.color.scales[parts[1]];
+      if (!scale) return null;
+      if (parts.length === 2) { // flat single-step scale, e.g. {color.white}
+        var ks = Object.keys(scale);
+        return ks.length ? scale[ks[0]] : null;
+      }
+      return scale[parts[2]] != null ? scale[parts[2]] : null;
+    }
+    var node = cfg;
+    for (var i = 0; i < parts.length; i++) {
+      if (node == null || typeof node !== 'object') return null;
+      node = node[parts[i]];
+    }
+    return (node != null && typeof node !== 'object') ? node : null;
+  }
+
+  // Resolve every semantic reference to concrete values. Shape mirrors cfg.semantic
+  // (color keeps light/dark). Broken refs resolve to null. Used by preview + exporters.
+  function resolveSemantic(cfg) {
+    var sem = cfg.semantic || {};
+    var out = { color: { light: {}, dark: {} }, text: {}, radius: {}, shadow: {}, space: {} };
+    ['light', 'dark'].forEach(function (theme) {
+      var set = (sem.color && sem.color[theme]) || {};
+      Object.keys(set).forEach(function (role) { out.color[theme][role] = resolveRef(cfg, set[role]); });
+    });
+    Object.keys(sem.text || {}).forEach(function (role) {
+      var t = sem.text[role], r = {};
+      Object.keys(t).forEach(function (axis) { r[axis] = resolveRef(cfg, t[axis]); });
+      out.text[role] = r;
+    });
+    ['radius', 'shadow', 'space'].forEach(function (grp) {
+      var set = sem[grp] || {};
+      Object.keys(set).forEach(function (role) { out[grp][role] = resolveRef(cfg, set[role]); });
+    });
+    return out;
   }
 
   function toCSS(cfg) {
@@ -303,7 +387,8 @@
 
   var TokenCore = { pyRound: pyRound, oklchToSrgb: oklchToSrgb, hexof: hexof,
     DEFAULT_CONFIG: DEFAULT_CONFIG, cloneConfig: cloneConfig,
-    buildRamp: buildRamp, buildAllRamps: buildAllRamps, toCSS: toCSS, toDTCG: toDTCG, toTailwind: toTailwind, toFigma: toFigma,
+    buildRamp: buildRamp, buildAllRamps: buildAllRamps, colorEntries: colorEntries, toCSS: toCSS, toDTCG: toDTCG, toTailwind: toTailwind, toFigma: toFigma,
+    resolveRef: resolveRef, resolveSemantic: resolveSemantic,
     relLuminance: relLuminance, contrastRatio: contrastRatio, contrastReport: contrastReport, isAlphaRamp: isAlphaRamp, createStore: createStore };
   root.TokenCore = TokenCore;
   if (typeof module !== 'undefined' && module.exports) module.exports = TokenCore;

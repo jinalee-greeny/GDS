@@ -29,7 +29,8 @@
     // 'stacked' (default, plugin): all categories + full preview, as the plugin
     // export workflow needs every category's toggles visible at once.
     var layout = opts.layout || 'stacked';
-    var activeDomain = 'color'; // master-detail: selected domain key
+    var activeLayer = 'scale';  // master-detail: 'scale' (primitive) | 'semantic'
+    var activeDomain = 'color'; // master-detail: selected domain key (within layer)
 
   function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
   function getAtPath(obj, path) {
@@ -1060,6 +1061,274 @@
     ]);
   }
 
+  // ---- Semantic layer editor -------------------------------------------------
+  // Role -> primitive reference ("{group.path}"). Colors are theme-varying
+  // (light/dark), the rest single. Edits mutate a clone of cfg.semantic and
+  // commit once. The active semantic domain (nav) picks the module; theme
+  // switches carry through module-level state and a full render().
+  var semanticTheme = 'light';    // light | dark
+  var TEXT_AXES = [
+    { key: 'size', grp: 'fontSize', label: 'Size' }, { key: 'weight', grp: 'fontWeight', label: 'Weight' },
+    { key: 'lineHeight', grp: 'lineHeight', label: 'Line height' }, { key: 'letterSpacing', grp: 'letterSpacing', label: 'Letter spacing' }
+  ];
+  // Context registry: what each role is FOR. Colors are grouped by context so the
+  // list reads as intent, not a flat map; every module carries per-role usage
+  // captions. Custom/renamed roles simply fall through with no caption.
+  var SEM_COLOR_GROUPS = [
+    { label: 'Surface · 배경 / 표면', roles: {
+      bg: '앱 최상위 배경', surface: '카드·패널 기본 표면',
+      'surface-sunken': '입력·코드 등 오목한 영역', 'surface-raised': '떠 있는 표면(팝오버 등)' } },
+    { label: 'Text · 텍스트', roles: {
+      text: '기본 본문 텍스트', 'text-muted': '보조 텍스트',
+      'text-subtle': '가장 약한 텍스트·플레이스홀더', 'text-inverse': '어둡거나 강조된 배경 위 텍스트' } },
+    { label: 'Border · 테두리', roles: {
+      border: '기본 구분선·테두리', 'border-strong': '강조 테두리·입력 포커스' } },
+    { label: 'Brand · 브랜드 / 상호작용', roles: {
+      primary: '주요 버튼·링크·강조', 'primary-hover': 'primary hover 상태',
+      'primary-active': 'primary 눌림(active) 상태', 'primary-fg': 'primary 위 텍스트·아이콘', accent: '보조 강조색' } },
+    { label: 'Status · 상태', roles: {
+      danger: '위험·삭제·오류', 'danger-fg': 'danger 위 텍스트',
+      success: '성공·완료', 'success-fg': 'success 위 텍스트',
+      info: '정보·안내', 'info-fg': 'info 위 텍스트' } }
+  ];
+  var SEM_USE = {
+    text: { display: '대형 히어로 타이틀', heading: '페이지·섹션 제목', title: '카드·블록 제목',
+      body: '기본 본문', label: '폼 라벨·버튼 텍스트', caption: '캡션·보조 설명' },
+    radius: { control: '버튼·인풋·셀렉트', card: '카드·패널·모달', pill: '배지·토글·칩(완전 둥근)' },
+    shadow: { card: '카드 기본 그림자', popover: '드롭다운·팝오버', modal: '모달·다이얼로그' },
+    space: { 'inset-sm': '좁은 안쪽 패딩', 'inset-md': '기본 안쪽 패딩', 'inset-lg': '넓은 안쪽 패딩',
+      'gap-sm': '좁은 요소 간격', 'gap-md': '기본 요소 간격', 'gap-lg': '넓은 요소 간격' }
+  };
+  // Editable role name with a usage caption beneath it (the "맥락").
+  function semNameCol(role, use, onrename) {
+    return el('div', { class: 'sem-namecol' },
+      [semRoleName(role, onrename)].concat(use ? [el('div', { class: 'sem-use', text: use })] : []));
+  }
+
+  function updateSemantic(mutate) {
+    var sem = JSON.parse(JSON.stringify(store.get().semantic));
+    mutate(sem);
+    store.setPath(['semantic'], sem);
+  }
+  // Ref options for the color dropdown: every primitive color step (+ flat singles).
+  function colorRefOptions(cfg) {
+    var opts = [];
+    cfg.color.order.forEach(function (name) {
+      var scale = cfg.color.scales[name] || {}, keys = Object.keys(scale);
+      if (keys.length === 1) opts.push({ ref: '{color.' + name + '}', label: name });
+      else keys.forEach(function (s) { opts.push({ ref: '{color.' + name + '.' + s + '}', label: name + ' / ' + s }); });
+    });
+    return opts;
+  }
+  function groupRefOptions(cfg, grp) {
+    return Object.keys(cfg[grp] || {}).map(function (k) {
+      return { ref: '{' + grp + '.' + k + '}', label: k + '  ·  ' + cfg[grp][k] };
+    });
+  }
+  // <select> of refs bound to a semantic path. If the stored ref isn't among the
+  // options (points at a deleted/renamed primitive), a ⚠ broken option is shown.
+  function refSelect(curRef, options, onpick) {
+    var known = options.some(function (o) { return o.ref === curRef; });
+    var all = (known ? [] : [{ ref: curRef || '', label: '⚠ ' + (curRef || '(none)') }]).concat(options);
+    var sel = el('select', { class: 'sem-select', onchange: function (e) { onpick(e.target.value); } },
+      all.map(function (o) { return el('option', { value: o.ref }, [o.label]); }));
+    sel.value = curRef || '';
+    return sel;
+  }
+  function semSwatch(hex) {
+    return el('div', {
+      class: 'sem-swatch' + (hex ? '' : ' sem-swatch-broken'),
+      style: hex ? 'background:' + hex : '', title: hex || 'broken reference'
+    }, hex ? [] : ['⚠']);
+  }
+  // Editable role name (renames across BOTH themes for color; single map otherwise).
+  function semRoleName(role, onrename) {
+    return el('input', {
+      type: 'text', class: 'sem-role', 'aria-label': 'Role name', value: role,
+      onchange: function (e) {
+        var nn = e.target.value.trim();
+        if (!nn || nn === role) { e.target.value = role; return; }
+        onrename(nn);
+      }
+    });
+  }
+  function semDelBtn(label, onclick) {
+    return el('button', { type: 'button', class: 'kv-del-btn', 'aria-label': label, onclick: onclick }, [icon('trash')]);
+  }
+  function renameKeyInPlace(map, oldK, newK) {
+    var next = {};
+    Object.keys(map).forEach(function (k) { next[k === oldK ? uniqueKey(Object.keys(next), newK) : k] = map[k]; });
+    return next;
+  }
+
+  function semColorRow(cfg, role, ref, opts, use) {
+    var sel = refSelect(ref, opts, function (v) { updateSemantic(function (s) { s.color[semanticTheme][role] = v; }); });
+    var nameCol = semNameCol(role, use, function (nn) {
+      updateSemantic(function (s) {
+        s.color.light = renameKeyInPlace(s.color.light, role, nn);
+        s.color.dark = renameKeyInPlace(s.color.dark, role, nn);
+      });
+    });
+    var del = semDelBtn('Delete role ' + role, function () {
+      updateSemantic(function (s) { delete s.color.light[role]; delete s.color.dark[role]; });
+    });
+    return el('div', { class: 'sem-row' }, [semSwatch(C.resolveRef(cfg, ref)), nameCol, sel, del]);
+  }
+  function renderSemanticColorModule(cfg) {
+    var opts = colorRefOptions(cfg);
+    var set = (cfg.semantic.color[semanticTheme]) || {};
+    var placed = {};
+    // Grouped-by-context sections; only roles actually present are shown.
+    var sections = SEM_COLOR_GROUPS.map(function (g) {
+      var keys = Object.keys(g.roles).filter(function (r) { return set.hasOwnProperty(r); });
+      if (!keys.length) return null;
+      var rows = keys.map(function (role) { placed[role] = true; return semColorRow(cfg, role, set[role], opts, g.roles[role]); });
+      return el('div', { class: 'sem-group' }, [el('div', { class: 'sem-group-head', text: g.label })].concat(rows));
+    }).filter(Boolean);
+    // Any role not in a known group (custom / renamed) lands here.
+    var custom = Object.keys(set).filter(function (r) { return !placed[r]; });
+    if (custom.length) {
+      var crows = custom.map(function (role) { return semColorRow(cfg, role, set[role], opts, ''); });
+      sections.push(el('div', { class: 'sem-group' }, [el('div', { class: 'sem-group-head', text: 'Custom · 사용자 정의' })].concat(crows)));
+    }
+    var add = el('button', { type: 'button', class: 'kv-add-row', onclick: function () {
+      updateSemantic(function (s) {
+        var k = uniqueKey(Object.keys(s.color.light), 'role');
+        s.color.light[k] = '{color.gray.900}'; s.color.dark[k] = '{color.gray.50}';
+      });
+    } }, iconLabel('plus', 'Add role'));
+    return el('div', { class: 'sem-rows' }, sections.concat([add]));
+  }
+
+  function renderSemanticTextModule(cfg) {
+    var set = cfg.semantic.text || {};
+    var rows = Object.keys(set).map(function (role) {
+      var t = set[role];
+      // Axes stacked vertically: each is a [label][select] line, select at its
+      // natural size (not stretched).
+      var axes = TEXT_AXES.map(function (ax) {
+        return el('label', { class: 'sem-axis-row' }, [
+          el('span', { class: 'sem-axis-label', text: ax.label }),
+          refSelect(t[ax.key], groupRefOptions(cfg, ax.grp), function (v) {
+            updateSemantic(function (s) { s.text[role][ax.key] = v; });
+          })
+        ]);
+      });
+      var nameCol = semNameCol(role, (SEM_USE.text || {})[role] || '',
+        function (nn) { updateSemantic(function (s) { s.text = renameKeyInPlace(s.text, role, nn); }); });
+      var del = semDelBtn('Delete text role ' + role, function () { updateSemantic(function (s) { delete s.text[role]; }); });
+      // Name input on the left, the vertical axis group beside it, delete at end.
+      return el('div', { class: 'sem-text-row' }, [nameCol, el('div', { class: 'sem-text-axes' }, axes), del]);
+    });
+    var add = el('button', { type: 'button', class: 'kv-add-row', onclick: function () {
+      updateSemantic(function (s) {
+        var k = uniqueKey(Object.keys(s.text), 'style');
+        s.text[k] = { size: '{fontSize.md}', weight: '{fontWeight.regular}', lineHeight: '{lineHeight.normal}', letterSpacing: '{letterSpacing.normal}' };
+      });
+    } }, iconLabel('plus', 'Add text style'));
+    return el('div', { class: 'sem-rows' }, rows.concat([add]));
+  }
+
+  function renderSemanticScalarModule(cfg, grp) {
+    var set = cfg.semantic[grp] || {};
+    var opts = groupRefOptions(cfg, grp);
+    var pvFn = KV_PREVIEWS[grp === 'space' ? 'space' : grp];
+    var rows = Object.keys(set).map(function (role) {
+      var ref = set[role], val = C.resolveRef(cfg, ref);
+      var pv = (pvFn && val) ? pvFn(val) : el('div', { class: 'kv-pv' });
+      var sel = refSelect(ref, opts, function (v) { updateSemantic(function (s) { s[grp][role] = v; }); });
+      var use = (SEM_USE[grp] || {})[role] || '';
+      var nameCol = semNameCol(role, use, function (nn) { updateSemantic(function (s) { s[grp] = renameKeyInPlace(s[grp], role, nn); }); });
+      var del = semDelBtn('Delete ' + grp + ' role ' + role, function () { updateSemantic(function (s) { delete s[grp][role]; }); });
+      return el('div', { class: 'sem-row' }, [pv, nameCol, sel, del]);
+    });
+    var add = el('button', { type: 'button', class: 'kv-add-row', onclick: function () {
+      updateSemantic(function (s) { var k = uniqueKey(Object.keys(s[grp]), 'role'); s[grp][k] = opts.length ? opts[0].ref : ''; });
+    } }, iconLabel('plus', 'Add role'));
+    return el('div', { class: 'sem-rows' }, rows.concat([add]));
+  }
+
+  // Live specimen card rendered from the resolved semantic colors of `theme`.
+  function renderSemanticPreview(cfg, theme) {
+    var c = C.resolveSemantic(cfg).color[theme] || {};
+    function v(k, fb) { return c[k] || fb || 'transparent'; }
+    var chip = function (bg, fg, label) {
+      return el('span', { class: 'sem-chip', style: 'background:' + bg + ';color:' + fg }, [label]);
+    };
+    var card = el('div', { class: 'sem-surface', style: 'background:' + v('surface') + ';border:1px solid ' + v('border') + ';border-radius:10px' }, [
+      el('div', { class: 'sem-pv-title', style: 'color:' + v('text'), text: 'Surface title' }),
+      el('div', { class: 'sem-pv-body', style: 'color:' + v('text-muted'), text: 'Muted body text on a surface panel.' }),
+      el('div', { class: 'sem-pv-btns' }, [
+        el('button', { type: 'button', class: 'sem-pv-btn', style: 'background:' + v('primary') + ';color:' + v('primary-fg') }, ['Primary']),
+        el('button', { type: 'button', class: 'sem-pv-btn', style: 'background:' + v('danger') + ';color:' + v('danger-fg') }, ['Danger']),
+        el('button', { type: 'button', class: 'sem-pv-btn sem-pv-btn-ghost', style: 'color:' + v('text') + ';border:1px solid ' + v('border') }, ['Ghost'])
+      ]),
+      el('div', { class: 'sem-pv-chips' }, [
+        chip(v('success'), v('success-fg'), 'success'),
+        chip(v('info'), v('info-fg'), 'info'),
+        chip(v('accent'), v('primary-fg'), 'accent')
+      ])
+    ]);
+    return el('div', { class: 'sem-pv-frame', style: 'background:' + v('bg') }, [card]);
+  }
+
+  function renderSemanticEditor(cfg, moduleKey) {
+    if (moduleKey === 'color') {
+      var toggle = el('div', { class: 'sem-theme-toggle', role: 'tablist', 'aria-label': 'Theme' },
+        ['light', 'dark'].map(function (t) {
+          return el('button', {
+            type: 'button', class: 'sem-theme-tab', role: 'tab', 'aria-selected': t === semanticTheme ? 'true' : 'false',
+            onclick: function () { semanticTheme = t; render(); }
+          }, [t === 'light' ? 'Light' : 'Dark']);
+        }));
+      return el('div', {}, [toggle, renderSemanticColorModule(cfg)]);
+    }
+    if (moduleKey === 'text') return renderSemanticTextModule(cfg);
+    return renderSemanticScalarModule(cfg, moduleKey);
+  }
+
+  // Type specimen: each text role rendered in its resolved style over the
+  // semantic light surface — the meaningful preview for the Text module.
+  function renderSemanticTypeSpecimen(cfg) {
+    var res = C.resolveSemantic(cfg), c = res.color.light || {};
+    var lines = Object.keys(res.text).map(function (role) {
+      var t = res.text[role];
+      return el('div', {
+        class: 'sem-type-line',
+        style: ['font-size:' + (t.size || '16px'), 'font-weight:' + (t.weight || '400'),
+          'line-height:' + (t.lineHeight || '1.5'), 'letter-spacing:' + (t.letterSpacing || '0em'),
+          'color:' + (c.text || '#111')].join(';'),
+        text: role.charAt(0).toUpperCase() + role.slice(1)
+      });
+    });
+    return el('div', { class: 'sem-type-frame', style: 'background:' + (c.bg || '#fff') }, lines);
+  }
+
+  // Semantic domain view for one module. The domain nav (Color/Text/…) selects
+  // the module. Color/Text get a meaningful preview column; Radius/Shadow/Space
+  // rely on their inline row previews and take the full width.
+  function renderSemanticView(cfg, moduleKey) {
+    var editorCol = el('div', { class: 'sem-editor-col' }, [renderSemanticEditor(cfg, moduleKey)]);
+    var previewNode = null;
+    if (moduleKey === 'color') {
+      previewNode = el('div', { class: 'sem-preview-col' }, [
+        el('h3', { class: 'sem-pv-heading', text: 'Preview · ' + (semanticTheme === 'light' ? 'Light' : 'Dark') }),
+        renderSemanticPreview(cfg, semanticTheme)
+      ]);
+    } else if (moduleKey === 'text') {
+      previewNode = el('div', { class: 'sem-preview-col' }, [
+        el('h3', { class: 'sem-pv-heading', text: 'Preview' }),
+        renderSemanticTypeSpecimen(cfg)
+      ]);
+    }
+    var body = previewNode ? el('div', { class: 'sem-layout' }, [previewNode, editorCol]) : editorCol;
+    return el('div', { class: 'pv-block sem-view' }, [
+      el('h3', { text: 'Semantic · ' + moduleKey.charAt(0).toUpperCase() + moduleKey.slice(1) }),
+      el('p', { class: 'pv-hint', text: '역할(role) → primitive 참조. 컬러만 Light/Dark 두 세트, 나머지는 단일. primitive를 바꾸면 참조가 자동 반영됩니다. ⚠ 는 깨진 참조.' }),
+      body
+    ]);
+  }
+
   var DOMAINS = [
     { key: 'color', label: 'Color', category: 'color', preview: ['pv-color'] },
     { key: 'typography', label: 'Typography', category: 'typography', preview: ['pv-type'] },
@@ -1067,15 +1336,46 @@
     { key: 'effects', label: 'Effects', category: 'effects', preview: ['pv-shadow', 'pv-opacity'] },
     { key: 'motion', label: 'Motion', category: 'motion', preview: ['pv-motion'] },
     { key: 'layout', label: 'Layout', category: 'layout', preview: ['pv-layout'] },
-    { key: 'a11y', label: 'Accessibility', full: 'a11y' },
-    { key: 'export', label: 'Export', full: 'export' }
+    { key: 'a11y', label: 'Accessibility', full: 'a11y' }
   ];
-  function domainByKey(k) { for (var i = 0; i < DOMAINS.length; i++) if (DOMAINS[i].key === k) return DOMAINS[i]; return null; }
+  // Semantic layer: each module is its own domain (Color/Text/Radius/Shadow/Space).
+  var SEMANTIC_DOMAINS = [
+    { key: 'sem-color', label: 'Color', full: 'semantic', semKey: 'color' },
+    { key: 'sem-text', label: 'Text', full: 'semantic', semKey: 'text' },
+    { key: 'sem-radius', label: 'Radius', full: 'semantic', semKey: 'radius' },
+    { key: 'sem-shadow', label: 'Shadow', full: 'semantic', semKey: 'shadow' },
+    { key: 'sem-space', label: 'Space', full: 'semantic', semKey: 'space' }
+  ];
+  var EXPORT_DOMAIN = { key: 'export', label: 'Export', full: 'export' }; // shared across layers
+  var LAYERS = [{ key: 'scale', label: 'Scale' }, { key: 'semantic', label: 'Semantic' }];
+  function domainsForLayer(layer) {
+    return (layer === 'semantic' ? SEMANTIC_DOMAINS : DOMAINS).concat([EXPORT_DOMAIN]);
+  }
+  var ALL_DOMAINS = DOMAINS.concat(SEMANTIC_DOMAINS).concat([EXPORT_DOMAIN]);
+  function domainByKey(k) { for (var i = 0; i < ALL_DOMAINS.length; i++) if (ALL_DOMAINS[i].key === k) return ALL_DOMAINS[i]; return null; }
   function categoryByKey(k) { for (var i = 0; i < CATEGORIES.length; i++) if (CATEGORIES[i].key === k) return CATEGORIES[i]; return null; }
   function setActiveDomain(key) { activeDomain = key; render(); }
+  function setActiveLayer(layer) {
+    if (layer === activeLayer) return;
+    activeLayer = layer;
+    activeDomain = domainsForLayer(layer)[0].key; // land on the layer's first domain
+    render();
+  }
+
+  // Top-level layer switch (Scale ↔ Semantic) as a segmented control.
+  function renderLayerSwitch() {
+    return el('div', { class: 'layer-switch', role: 'tablist', 'aria-label': 'Token layer' },
+      LAYERS.map(function (l) {
+        return el('button', {
+          type: 'button', class: 'layer-tab', role: 'tab',
+          'aria-selected': l.key === activeLayer ? 'true' : 'false',
+          onclick: function () { setActiveLayer(l.key); }
+        }, [l.label]);
+      }));
+  }
 
   function renderDomainNav() {
-    var btns = DOMAINS.map(function (d) {
+    var btns = domainsForLayer(activeLayer).map(function (d) {
       return el('button', {
         type: 'button', class: 'domain-tab' + (d.key === 'export' ? ' domain-tab-export' : ''),
         role: 'tab', 'aria-selected': d.key === activeDomain ? 'true' : 'false',
@@ -1127,13 +1427,15 @@
   }
 
   function renderMasterDetailBody(cfg, extrasArr) {
-    app.appendChild(renderDomainNav());
+    app.appendChild(el('div', { class: 'nav-shell' }, [renderLayerSwitch(), renderDomainNav()]));
     var domain = domainByKey(activeDomain) || DOMAINS[0];
 
     // Full-width, preview-/output-only domains (no paired settings pane):
-    // Accessibility (derived from Color) and Export.
+    // Semantic, Accessibility (derived from Color) and Export.
     if (domain.full) {
-      var content = domain.full === 'export' ? extrasArr : [renderAccessibilityView(cfg)];
+      var content = domain.full === 'export' ? extrasArr
+        : domain.full === 'semantic' ? [renderSemanticView(cfg, domain.semKey)]
+        : [renderAccessibilityView(cfg)];
       var fullCol = el('div', { class: 'preview-col' },
         [el('div', { class: 'preview-body', id: 'preview-col' }, content)]);
       app.appendChild(el('div', { class: 'app-body app-body-single' }, [fullCol]));

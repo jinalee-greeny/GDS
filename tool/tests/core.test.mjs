@@ -59,6 +59,34 @@ test('contrastReport reproduces GUIDE.md AA results', () => {
   assert.equal(by.white.blackMaxStep, 'base');
 });
 
+test('resolveRef resolves primitive references and reports broken ones', () => {
+  const cfg = core.DEFAULT_CONFIG;
+  assert.equal(core.resolveRef(cfg, '{color.blue.600}'), '#0A72DA');
+  assert.equal(core.resolveRef(cfg, '{color.white}'), '#FFFFFF'); // flat single-step scale
+  assert.equal(core.resolveRef(cfg, '{fontSize.md}'), '16px');
+  assert.equal(core.resolveRef(cfg, '{radius.lg}'), '8px');
+  assert.equal(core.resolveRef(cfg, '{color.nope.500}'), null); // missing scale
+  assert.equal(core.resolveRef(cfg, '{fontSize.zzz}'), null);   // missing key
+  assert.equal(core.resolveRef(cfg, '#fff'), null);             // not a reference
+});
+
+test('resolveSemantic resolves the whole tree with light/dark colors', () => {
+  const s = core.resolveSemantic(core.DEFAULT_CONFIG);
+  assert.equal(s.color.light.primary, '#0A72DA'); // {color.blue.600}
+  assert.equal(s.color.dark.primary, '#1B8AFF');  // {color.blue.500}
+  assert.equal(s.color.light.bg, '#FFFFFF');
+  assert.equal(JSON.stringify(s.text.body),
+    JSON.stringify({ size: '16px', weight: '400', lineHeight: '1.5', letterSpacing: '0em' }));
+  assert.equal(s.radius.card, '8px');
+  assert.equal(s.shadow.modal, '0 12px 28px rgba(0,0,0,0.16)');
+});
+
+test('resolveSemantic surfaces a broken ref as null (deleted scale)', () => {
+  const cfg = core.cloneConfig(core.DEFAULT_CONFIG);
+  cfg.semantic.color.light.primary = '{color.deleted.500}';
+  assert.equal(core.resolveSemantic(cfg).color.light.primary, null);
+});
+
 test('store setPath / undo / redo / dirty', () => {
   const s = core.createStore();
   assert.equal(s.isDirty(), false);

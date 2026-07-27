@@ -150,6 +150,19 @@
   .mod-tab[aria-selected="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(20, 24, 33, .08); }
   /* Master-detail (web shell): top domain selector; one domain's preview + its
      settings shown side by side below. */
+  /* Top-level layer switch (Scale ↔ Semantic): a prominent segmented control
+     above the domain nav. Sits in .nav-shell with the underline domain tabs. */
+  .layer-switch {
+    display: inline-flex; gap: 4px; margin: 14px 20px 0; padding: 3px;
+    background: var(--surface-sunken); border-radius: 10px; align-self: flex-start;
+  }
+  .layer-tab {
+    border: none; background: transparent; color: var(--muted);
+    font-size: 14px; font-weight: 700; padding: 7px 20px; border-radius: 8px;
+  }
+  .layer-tab:hover { color: var(--text); }
+  .layer-tab[aria-selected="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(20, 24, 33, .08); }
+
   /* Depth-1 domain selector: an underline tab bar (primary, top-level nav).
      Tabs sit on the nav's bottom border; the active one gets an accent underline. */
   .domain-nav {
@@ -283,6 +296,74 @@
   .kv-pv-weight { display: flex; align-items: center; justify-content: center; font-size: 14px; color: var(--text); border: 1px solid var(--border); border-radius: 6px; background: var(--surface); }
   .kv-msg { flex-basis: 100%; font-size: 14px; color: #b91c1c; }
   .kv-add-row { margin-top: 4px; }
+
+  /* ---- Semantic layer editor ---- */
+  .sem-layout { display: grid; grid-template-columns: minmax(280px, 360px) minmax(0, 1fr); gap: 28px; align-items: start; margin-top: 16px; }
+  @media (max-width: 860px) { .sem-layout { grid-template-columns: 1fr; } }
+  .sem-preview-col { position: sticky; top: 0; }
+  .sem-pv-heading { margin: 0 0 10px; font-size: 13px; font-weight: 600; color: var(--muted); }
+  .sem-editor-col .mod-tabs { margin-bottom: 16px; }
+  .sem-rows { display: flex; flex-direction: column; gap: 10px; }
+  /* Every control on a row shares one height (--sem-h) and the row aligns them to
+     the top, so the first line is pixel-aligned; the usage caption hangs below
+     inside .sem-namecol without shifting the other controls. */
+  .sem-row { --sem-h: 34px; display: flex; align-items: flex-start; gap: 8px; }
+  .sem-swatch {
+    flex: 0 0 auto; width: var(--sem-h); height: var(--sem-h); border-radius: 6px; border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center; font-size: 13px; color: #b91c1c;
+    background-image: linear-gradient(45deg, #c8ccd2 25%, transparent 25%), linear-gradient(-45deg, #c8ccd2 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #c8ccd2 75%), linear-gradient(-45deg, transparent 75%, #c8ccd2 75%);
+    background-size: 8px 8px; background-position: 0 0, 0 4px, 4px -4px, -4px 0;
+  }
+  .sem-swatch-broken { border-color: #b91c1c; border-style: dashed; }
+  .sem-role { width: 100%; height: var(--sem-h); box-sizing: border-box; padding: 0 10px; border: 1px solid var(--border-strong); border-radius: 8px; font: inherit; background: var(--surface); color: var(--text); }
+  .sem-namecol { flex: 0 1 210px; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .sem-use { font-size: 12px; line-height: 1.35; color: var(--muted-2); padding: 0 2px; }
+  .sem-select { height: var(--sem-h); padding: 0 10px; border: 1px solid var(--border-strong); border-radius: 8px; font: inherit; background: var(--surface); color: var(--text); box-sizing: border-box; max-width: 100%; }
+  .sem-row .sem-select { flex: 1 1 160px; min-width: 0; }  /* horizontal row: basis is width */
+  .sem-row .kv-del-btn { flex: 0 0 auto; width: var(--sem-h); height: var(--sem-h); display: inline-flex; align-items: center; justify-content: center; padding: 0; color: var(--muted); }
+  .sem-row .kv-del-btn:hover { color: var(--text); }
+  .sem-row .kv-pv { flex: 0 0 auto; width: var(--sem-h); height: var(--sem-h); }
+
+  /* context grouping */
+  .sem-group + .sem-group { margin-top: 20px; }
+  .sem-group-head { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 2px 0 10px; }
+  .sem-group .sem-row + .sem-row { margin-top: 8px; }
+
+  .sem-theme-toggle { display: inline-flex; gap: 4px; margin-bottom: 16px; background: var(--surface-sunken); border-radius: 10px; padding: 3px; }
+  .sem-theme-tab { border: none; background: transparent; color: var(--muted); font-weight: 600; padding: 6px 16px; border-radius: 8px; }
+  .sem-theme-tab[aria-selected="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(20, 24, 33, .08); }
+
+  /* text-style module: name input on the left, the 4 axis settings stacked
+     vertically beside it, delete at the end. */
+  .sem-text-row { --sem-h: 34px; display: flex; align-items: flex-start; gap: 24px; padding: 16px 0; border-bottom: 1px solid var(--border); }
+  .sem-text-row:last-of-type { border-bottom: none; }
+  .sem-text-row .sem-namecol { flex: 0 0 190px; }
+  .sem-text-axes { flex: 0 1 auto; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .sem-axis-row { display: flex; align-items: center; gap: 12px; }
+  .sem-axis-row .sem-axis-label { flex: 0 0 96px; font-size: 13px; color: var(--muted); }
+  .sem-axis-row .sem-select { flex: 0 1 240px; }  /* natural size, not stretched */
+  .sem-text-row .kv-del-btn { flex: 0 0 auto; margin-left: auto; width: var(--sem-h); height: var(--sem-h); display: inline-flex; align-items: center; justify-content: center; padding: 0; color: var(--muted); }
+  .sem-text-row .kv-del-btn:hover { color: var(--text); }
+
+  /* Shared preview specimen chrome: one framed canvas (semantic bg set inline,
+     neutral app border) so Color and Text previews read as one family. */
+  .sem-pv-frame, .sem-type-frame { padding: 18px; border-radius: 12px; border: 1px solid var(--border); }
+
+  /* type specimen (Text module preview) */
+  .sem-type-frame { display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
+  .sem-type-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+
+  /* color specimen: a surface card on the bg canvas */
+  .sem-surface { padding: 16px; border-radius: 10px; }
+  .sem-pv-title { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+  .sem-pv-body { font-size: 14px; margin-bottom: 14px; }
+  .sem-pv-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .sem-pv-btn { border: none; border-radius: 8px; padding: 8px 14px; font-weight: 600; font-size: 13px; }
+  .sem-pv-btn-ghost { background: transparent; }
+  .sem-pv-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .sem-chip { border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 600; }
+
   .pv-block { border: 1px solid var(--border); border-radius: var(--radius-card); margin-bottom: 20px; padding: 24px; background: var(--surface); scroll-margin-top: 16px; }
   /* Fixed jump-nav header (not sticky-in-scroll; it's a flex sibling above the
      scrollable body, so it never scrolls away). */
