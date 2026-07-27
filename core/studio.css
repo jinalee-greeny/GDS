@@ -275,11 +275,15 @@
   .kv-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 0; border-top: 1px solid var(--hairline); }
   .kv-row:first-child { border-top: none; }
   .kv-row input[type="text"] { padding: 8px 12px; border: 1px solid var(--border-strong); border-radius: 8px; font: inherit; background: var(--surface); color: var(--text); }
-  .kv-row .kv-del-btn { flex: 0 0 auto; padding: 6px 9px; color: var(--muted); }
+  .kv-row .kv-del-btn { flex: 0 0 auto; width: 38px; height: 38px; padding: 0; display: inline-flex; align-items: center; justify-content: center; color: var(--muted); }
   .kv-row .kv-del-btn:hover { color: var(--text); }
   .kv-row .kv-key { flex: 0 1 100px; min-width: 68px; }
   .kv-row .kv-val { flex: 1 1 140px; min-width: 96px; }
-  .kv-row .kv-font-preset { flex: 0 0 auto; max-width: 130px; padding: 8px 10px; border: 1px solid var(--border-strong); border-radius: 8px; font: inherit; background: var(--surface); color: var(--muted); }
+  .kv-row .kv-font-preset { flex: 0 0 auto; width: 104px; max-width: 104px; padding: 8px 10px; border: 1px solid var(--border-strong); border-radius: 8px; font: inherit; background: var(--surface); color: var(--muted); }
+  /* fontFamily rows carry a 4th control (preset), so let the value shrink first
+     — the delete button must never wrap to its own line. */
+  .kv-row-font .kv-key { flex: 0 1 76px; min-width: 52px; }
+  .kv-row-font .kv-val { flex: 1 1 60px; min-width: 0; }
   /* Per-row value preview (parallels the color step swatch) */
   .kv-pv { flex: 0 0 auto; width: 30px; height: 30px; }
   .kv-pv-box { border: 1px solid var(--border); border-radius: 6px; background: var(--accent); }

@@ -514,7 +514,7 @@
 
       var pv = pvFn ? pvFn(group[key]) : null;
       var preset = groupKey === 'fontFamily' ? fontPresetSelect(groupKey, key) : null;
-      return el('div', { class: 'kv-row' },
+      return el('div', { class: 'kv-row' + (preset ? ' kv-row-font' : '') },
         (pv ? [pv] : []).concat([keyInput, valInput]).concat(preset ? [preset] : []).concat([removeBtn, msg]));
     });
 
