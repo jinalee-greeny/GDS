@@ -224,6 +224,36 @@ tsout["borderRadius"]={k:{"value":v,"type":"borderRadius"} for k,v in radius.ite
 tsout["borderWidth"]={k:{"value":v,"type":"borderWidth"} for k,v in border_width.items()}
 tsout["opacity"]={k:{"value":v,"type":"opacity"} for k,v in opacity.items()}
 tsout["boxShadow"]={k:{"value":v,"type":"boxShadow"} for k,v in shadow.items()}
+# semantic layer as Tokens Studio aliases (group names remapped; text = typography composite)
+TS_PATH={"color":"color","fontSize":"fontSizes","fontWeight":"fontWeights","fontFamily":"fontFamilies","lineHeight":"lineHeights","letterSpacing":"letterSpacing","space":"spacing","radius":"borderRadius","shadow":"boxShadow"}
+TS_TYPO_ORDER=[("family","fontFamily"),("size","fontSize"),("weight","fontWeight"),("lineHeight","lineHeight"),("letterSpacing","letterSpacing")]
+def ref_to_ts(ref):
+    if not isinstance(ref,str): return None
+    r=ref.strip()
+    if not (r.startswith("{") and r.endswith("}")): return None
+    parts=r[1:-1].split("."); base=TS_PATH.get(parts[0])
+    if not base: return None
+    return "{"+base+((("."+".".join(parts[1:])) if len(parts)>1 else ""))+"}"
+def _ts_scalar(s,t):
+    o={}
+    for r,ref in s.items():
+        v=ref_to_ts(ref)
+        if v: o[r]={"value":v,"type":t}
+    return o
+sem_text={}
+for role,axes in semantic["text"].items():
+    val={}
+    for axis,tskey in TS_TYPO_ORDER:
+        v=ref_to_ts(axes.get(axis))
+        if v: val[tskey]=v
+    sem_text[role]={"value":val,"type":"typography"}
+tsout["semantic"]={
+ "color":{"light":_ts_scalar(semantic["color"]["light"],"color"),"dark":_ts_scalar(semantic["color"]["dark"],"color")},
+ "text":sem_text,
+ "radius":_ts_scalar(semantic["radius"],"borderRadius"),
+ "shadow":_ts_scalar(semantic["shadow"],"boxShadow"),
+ "space":_ts_scalar(semantic["space"],"spacing"),
+}
 open(f"{OUT}/build/tokens.figma.json","w").write(json.dumps(tsout,indent=2,ensure_ascii=False))
 
 print("Generated files:")

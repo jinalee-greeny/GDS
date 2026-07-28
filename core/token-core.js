@@ -397,6 +397,36 @@
     Object.keys(obj).forEach(function (k) { out[k] = { value: obj[k], type: type }; });
     return out;
   }
+  // Tokens Studio group names differ from ref groups — remap a ref's path.
+  var TS_PATH = { color: 'color', fontSize: 'fontSizes', fontWeight: 'fontWeights', fontFamily: 'fontFamilies',
+    lineHeight: 'lineHeights', letterSpacing: 'letterSpacing', space: 'spacing', radius: 'borderRadius', shadow: 'boxShadow' };
+  var TS_TYPO_ORDER = [['family', 'fontFamily'], ['size', 'fontSize'], ['weight', 'fontWeight'], ['lineHeight', 'lineHeight'], ['letterSpacing', 'letterSpacing']];
+  function refToTS(ref) {
+    if (typeof ref !== 'string') return null;
+    var m = /^\{(.+)\}$/.exec(ref.trim());
+    if (!m) return null;
+    var parts = m[1].split('.'), base = TS_PATH[parts[0]];
+    if (!base) return null;
+    return '{' + base + (parts.length > 1 ? '.' + parts.slice(1).join('.') : '') + '}';
+  }
+  function semanticTS(cfg) {
+    var sem = cfg.semantic; if (!sem) return undefined;
+    function colorSet(set) { var o = {}; Object.keys(set).forEach(function (r) { var v = refToTS(set[r]); if (v) o[r] = { value: v, type: 'color' }; }); return o; }
+    function scalarSet(set, type) { var o = {}; Object.keys(set).forEach(function (r) { var v = refToTS(set[r]); if (v) o[r] = { value: v, type: type }; }); return o; }
+    var text = {};
+    Object.keys(sem.text || {}).forEach(function (role) {
+      var t = sem.text[role], val = {};
+      TS_TYPO_ORDER.forEach(function (p) { var v = refToTS(t[p[0]]); if (v) val[p[1]] = v; });
+      text[role] = { value: val, type: 'typography' };
+    });
+    return {
+      color: { light: colorSet((sem.color && sem.color.light) || {}), dark: colorSet((sem.color && sem.color.dark) || {}) },
+      text: text,
+      radius: scalarSet(sem.radius || {}, 'borderRadius'),
+      shadow: scalarSet(sem.shadow || {}, 'boxShadow'),
+      space: scalarSet(sem.space || {}, 'spacing')
+    };
+  }
   function toFigma(cfg) {
     var ramps = buildAllRamps(cfg);
     var color = {};
@@ -418,7 +448,8 @@
       borderRadius: tsGrp(cfg.radius, 'borderRadius'),
       borderWidth: tsGrp(cfg.borderWidth, 'borderWidth'),
       opacity: tsGrp(cfg.opacity, 'opacity'),
-      boxShadow: tsGrp(cfg.shadow, 'boxShadow')
+      boxShadow: tsGrp(cfg.shadow, 'boxShadow'),
+      semantic: semanticTS(cfg)
     };
     return JSON.stringify(out, null, 2);
   }
