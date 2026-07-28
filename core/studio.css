@@ -335,6 +335,9 @@
   .sem-group-head { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 2px 0 10px; }
   .sem-group .sem-row + .sem-row { margin-top: 8px; }
 
+  .sem-editor-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .sem-editor-head-end { justify-content: flex-end; }
+  .sem-editor-head .sem-theme-toggle { margin-bottom: 0; }
   .sem-theme-toggle { display: inline-flex; gap: 4px; margin-bottom: 16px; background: var(--surface-sunken); border-radius: 10px; padding: 3px; }
   .sem-theme-tab { border: none; background: transparent; color: var(--muted); font-weight: 600; padding: 6px 16px; border-radius: 8px; }
   .sem-theme-tab[aria-selected="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(20, 24, 33, .08); }

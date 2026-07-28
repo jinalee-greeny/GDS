@@ -1352,6 +1352,18 @@
     return el('div', { class: 'sem-pv-frame', style: 'background:' + v('bg') }, [card, banners, extras]);
   }
 
+  // Reset one semantic module to its default (both themes for color); undoable.
+  function semResetBtn(moduleKey) {
+    return el('button', {
+      type: 'button', class: 'group-reset-btn',
+      'aria-label': 'Reset semantic ' + moduleKey + ' to defaults',
+      onclick: function () {
+        if (window.confirm('Semantic · ' + moduleKey + ' 를 기본값으로 되돌릴까요? (실행 취소로 복구 가능)')) {
+          updateSemantic(function (s) { s[moduleKey] = JSON.parse(JSON.stringify(C.DEFAULT_CONFIG.semantic[moduleKey])); });
+        }
+      }
+    }, iconLabel('reset', 'Reset'));
+  }
   function renderSemanticEditor(cfg, moduleKey) {
     if (moduleKey === 'color') {
       var toggle = el('div', { class: 'sem-theme-toggle', role: 'tablist', 'aria-label': 'Theme' },
@@ -1361,10 +1373,10 @@
             onclick: function () { semanticTheme = t; render(); }
           }, [t === 'light' ? 'Light' : 'Dark']);
         }));
-      return el('div', {}, [toggle, renderSemanticColorModule(cfg)]);
+      return el('div', {}, [el('div', { class: 'sem-editor-head' }, [toggle, semResetBtn('color')]), renderSemanticColorModule(cfg)]);
     }
-    if (moduleKey === 'text') return renderSemanticTextModule(cfg);
-    return renderSemanticScalarModule(cfg, moduleKey);
+    var body = moduleKey === 'text' ? renderSemanticTextModule(cfg) : renderSemanticScalarModule(cfg, moduleKey);
+    return el('div', {}, [el('div', { class: 'sem-editor-head sem-editor-head-end' }, [semResetBtn(moduleKey)]), body]);
   }
 
   // Type specimen: each text role rendered in its resolved style over the
