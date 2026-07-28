@@ -8,7 +8,7 @@
 ## 1. 개요 & 철학
 
 - **무엇인가**: 여러 프로젝트에서 재사용할 "기초 자산(core system)" 역할의 **디자인 시스템 마스터 프리셋**. 현재는 **primitive(원시값) 한 층**만 완성된 v1.
-- **primitive-only 범위**: 모든 토큰이 원시값(raw value)이다. alias/참조(`{color.blue.500}` 같은)가 없다 — 검증 리포트에서 "깨진 참조 0건, 모두 원시값"으로 강제된다 (§8).
+- **레이어**: primitive(원시값) + 그 위에 alias하는 **semantic 레이어**(부록 참조, 익스포트됨). primitive는 원시값만, semantic은 `{group.path}` 참조 — §8에서 alias가 실제 토큰으로 해석되는지 검증한다.
 - **platform-agnostic**: 특정 플랫폼에 종속되지 않는다. 같은 SSOT에서 CSS 변수 / Tailwind preset / DTCG JSON / Figma(Tokens Studio + 플러그인 변수) 산출물을 파생시킨다.
 - **DTCG 정렬**: `tokens/tokens.json`은 DTCG(Design Tokens Community Group) 포맷(`$type`/`$value`)을 따른다.
 - **수동(manual) 컬러 모델**: 컬러 램프는 OKLCH 커브로 "생성"하지 않고, step→hex 맵을 **저장된 값 그대로** SSOT로 둔다. OKLCH 변환기(`buildRamp`/curves)는 선택적 "auto-fill" 편의 기능으로만 남아 있다.
@@ -250,7 +250,7 @@ python3 build_apps.py     # ② core/* + 템플릿 조립 → tool/index.html, p
 `build_docs.py`가 `tokens.json`을 읽어 리포트를 생성하며, 코어 로직은 `contrastReport`/`isAlphaRamp`로 미러링된다.
 
 ### 참조 무결성
-- primitive 레이어 → 모든 토큰이 원시값, alias 없음. `build_docs.py`의 `walk()`가 `$value`가 `{`로 시작하는(참조) 항목을 찾아 검사 → **깨진 참조 0건**.
+- primitive는 원시값, semantic은 alias. `build_docs.py`의 `walk()`가 `$value`가 `{`로 시작하는 alias를 실제 토큰 경로로 **해석**해 검증 → semantic alias 164개 전부 유효, **깨진 참조 0건**.
 
 ### WCAG AA 대비 (4.5:1)
 - 각 hue에서 흰 배경 대비 본문으로 안전한 **최소 step**(가장 밝은 통과)과 검은(다크) 배경 대비 **최대 step**(가장 어두운 통과)을 계산.
@@ -308,6 +308,14 @@ node --test tool/tests/*.mjs
 
 ---
 
-## 부록: semantic 레이어 (미존재)
+## 부록: semantic 레이어 (구현됨 + 익스포트됨)
 
-primitive 위에 `color.semantic.primary` 등을 alias하는 **semantic 레이어는 설계 중이며 아직 코드에 존재하지 않는다.** 본 문서는 primitive 레이어만 다룬다.
+primitive 위에 얹힌 semantic 층이 `core/token-core.js`의 `DEFAULT_CONFIG.semantic`(+ `build_tokens.py`에 미러)에 존재한다. 역할(role) → primitive 참조(`{color.blue.600}`)이며 `resolveRef`/`resolveSemantic`으로 해석. 컬러만 light/dark 두 세트, text(합성: size/weight/lineHeight/letterSpacing/family)·radius·shadow·space는 단일.
+
+**익스포터 출력** (4종 모두 JS↔Python 파리티):
+- **CSS** — semantic을 primitive CSS 변수로 잇는 `var()` 체인. semantic 컬러는 `:root`(light) + `:root[data-theme="dark"]` 오버라이드. text = `--type-<role>-<axis>`, radius/shadow/space = `--radius/shadow/space-<role>`.
+- **DTCG** — `semantic` 그룹의 alias 토큰(`$value: "{color.blue.600}"`, `$type`은 대상 primitive 타입). font 참조는 `{font.size.md}`로 경로 리맵.
+- **Tailwind** — semantic 컬러/radius/shadow/space가 `var(--role)` 참조로 병합(`bg-primary`, `rounded-card` 등, 다크 자동 반영). text 제외.
+- **Tokens Studio json** — `semantic` 그룹의 alias(그룹명 TS 규약으로 리맵) + text는 `typography` 합성 토큰.
+
+참조 무결성(§8): primitive는 원시값, semantic alias는 전부 실제 토큰으로 해석됨(깨진 참조 0건). 미완: Figma 플러그인 apply에 semantic 미반영(웹/익스포트만), DTCG import 복원 미구현.

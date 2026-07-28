@@ -71,13 +71,17 @@ python3 build_apps.py     # ② core/* + 템플릿을 조립해 tool/index.html,
 > 주의 ①: 토큰 값 변경은 `build_tokens.py` 내부 딕셔너리에서만. 재실행하면 tokens.json 이하 전부 갱신.
 > 주의 ②: 앱 코드 변경은 `core/*`와 `*.template.*` / `code.src.js`에서만. `build_apps.py` 재실행하면 생성물 갱신. `tool/index.html`·`plugin/code.js`·`plugin/ui.html`은 손대지 않음.
 
+## Semantic 레이어 (구현됨)
+- primitive를 alias하는 semantic 층이 `cfg.semantic`에 존재. 역할→참조(`{color.blue.600}`), 컬러만 light/dark 두 세트, text(합성: size/weight/lineHeight/letterSpacing/family)·radius·shadow·space는 단일. 편집기의 **Scale / Semantic** 레이어 스위치에서 편집.
+- **익스포트됨**: CSS(`var()` 체인 + `:root[data-theme="dark"]` 오버라이드), DTCG(alias 토큰), Tailwind(`var(--role)` 참조), Tokens Studio json(alias + typography 합성). 4개 산출물 모두 JS↔Python 파리티 유지.
+
 ## 검증 상태 (통과)
-- 참조 무결성: 원시값만, 깨진 참조 0건.
+- 참조 무결성: primitive는 원시값, semantic alias(164개)는 전부 유효 — 깨진 참조 0건.
 - WCAG AA(4.5:1): 불투명 스케일만 대비 검증(알파 스케일 제외). 기본값 기준 흰 배경 통과 최소 step = gray/red/blue 600, green 700, amber 900; 검은 배경 최대 step = gray/red/blue 500, green 600, amber 800.
-- Semantic 레이어 대비: 시스템이 정한 fg↔bg 짝은 라이트/다크 모두 AA(4.5:1) 통과하도록 튜닝됨 (Semantic › Accessibility 탭에서 검사).
+- Semantic 레이어 대비: 시스템이 정한 fg↔bg 17짝은 라이트/다크 모두 AA(4.5:1) 통과하도록 튜닝됨 (Semantic › Accessibility 탭에서 검사).
 
 ## 다음 단계 후보 (미완)
-1. **Semantic 레이어**: primitive를 alias한 `color.semantic.primary` 등 + 라이트/다크 테마 세트.
-2. 컬러/타이포 값 미세 조정.
+1. **Figma 플러그인에 semantic 반영**: 플러그인 UI에 semantic 노출 + Figma Variable **Modes**(light/dark)·Text 스타일 매핑·적용 로직. (현재 semantic은 웹 편집기 + 익스포트만; 플러그인 apply는 primitive만)
+2. semantic DTCG round-trip(import 복원) — 현재 export만, import는 semantic을 현재 상태로 보존.
 3. Style Dictionary 등 정식 빌드 파이프라인 도입(현재는 커스텀 python 생성기).
 4. Figma 변수 실제 반영: Tokens Studio로 `build/tokens.figma.json` import → Export to Variables.

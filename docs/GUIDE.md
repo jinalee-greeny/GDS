@@ -52,6 +52,13 @@ tokens/tokens.json   ← 여기만 관리 (SSOT)
 
 ---
 
+## Semantic 레이어
+
+primitive를 alias하는 semantic 층이 함께 익스포트됩니다 — 역할(role) → 참조(`{color.blue.600}`). 컬러만 light/dark, text(합성)·radius·shadow·space는 단일.
+- **CSS**: `var()` 체인 + `:root[data-theme="dark"]` 오버라이드 (`--primary`, `--type-body-size`, `--radius-card` …)
+- **DTCG**: `semantic` 그룹의 alias 토큰 · **Tailwind**: `var(--role)` 참조(`bg-primary`, `rounded-card`) · **Tokens Studio**: alias + `typography` 합성
+- fg↔bg 17짝 라이트/다크 모두 WCAG AA 통과 (편집기 Semantic › Accessibility).
+
 ## 검증 리포트
 
 ✅ 참조 무결성: primitive는 원시값, semantic alias 164개 모두 유효 — 깨진 참조 0건.
