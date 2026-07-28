@@ -1104,7 +1104,8 @@
   var semanticTheme = 'light';    // light | dark
   var TEXT_AXES = [
     { key: 'size', grp: 'fontSize', label: 'Size' }, { key: 'weight', grp: 'fontWeight', label: 'Weight' },
-    { key: 'lineHeight', grp: 'lineHeight', label: 'Line height' }, { key: 'letterSpacing', grp: 'letterSpacing', label: 'Letter spacing' }
+    { key: 'lineHeight', grp: 'lineHeight', label: 'Line height' }, { key: 'letterSpacing', grp: 'letterSpacing', label: 'Letter spacing' },
+    { key: 'family', grp: 'fontFamily', label: 'Family' }
   ];
   // Context registry: what each role is FOR. Colors are grouped by context so the
   // list reads as intent, not a flat map; every module carries per-role usage
@@ -1168,7 +1169,8 @@
   }
   function groupRefOptions(cfg, grp) {
     return Object.keys(cfg[grp] || {}).map(function (k) {
-      return { ref: '{' + grp + '.' + k + '}', label: k + '  ·  ' + cfg[grp][k] };
+      // fontFamily values are long CSS stacks — show just the slot name.
+      return { ref: '{' + grp + '.' + k + '}', label: grp === 'fontFamily' ? k : k + '  ·  ' + cfg[grp][k] };
     });
   }
   // <select> of refs bound to a semantic path. If the stored ref isn't among the
@@ -1399,7 +1401,7 @@
         class: 'sem-type-line',
         style: ['font-size:' + (t.size || '16px'), 'font-weight:' + (t.weight || '400'),
           'line-height:' + (t.lineHeight || '1.5'), 'letter-spacing:' + (t.letterSpacing || '0em'),
-          'color:' + (c.text || '#111')].join(';'),
+          'font-family:' + (t.family || 'inherit'), 'color:' + (c.text || '#111')].join(';'),
         text: role.charAt(0).toUpperCase() + role.slice(1)
       });
     });

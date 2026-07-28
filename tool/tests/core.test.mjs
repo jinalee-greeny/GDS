@@ -76,7 +76,8 @@ test('resolveSemantic resolves the whole tree with light/dark colors', () => {
   assert.equal(s.color.dark.primary, '#0A72DA');  // {color.blue.600} (AA-tuned)
   assert.equal(s.color.light.bg, '#FFFFFF');
   assert.equal(JSON.stringify(s.text.body),
-    JSON.stringify({ size: '16px', weight: '400', lineHeight: '1.5', letterSpacing: '0em' }));
+    JSON.stringify({ size: '16px', weight: '400', lineHeight: '1.5', letterSpacing: '0em',
+      family: "Pretendard, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" }));
   assert.equal(s.radius.card, '8px');
   assert.equal(s.shadow.modal, '0 12px 28px rgba(0,0,0,0.16)');
 });
