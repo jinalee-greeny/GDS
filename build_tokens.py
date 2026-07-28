@@ -28,7 +28,7 @@ Cm=[0.30,0.55,0.85,1.05,1.15,1.10,1.00,0.88,0.72,0.55,0.42]
 # Manual color model (mirrors core/token-core.js DEFAULT_CONFIG.color exactly).
 # Each scale is an ordered step->hex map; a single-step scale (black/white) is
 # a flat color. Order matters — output must byte-match the JS engine.
-color_order=["black","white","black-alpha","white-alpha","gray","red","blue","green"]
+color_order=["black","white","black-alpha","white-alpha","gray","red","amber","green","blue"]
 color_scales={
  "black":{"base":"#000000"},
  "white":{"base":"#FFFFFF"},
@@ -36,8 +36,9 @@ color_scales={
  "white-alpha":{"5":"#FFFFFF0D","10":"#FFFFFF1A","20":"#FFFFFF33","40":"#FFFFFF66","60":"#FFFFFF99","80":"#FFFFFFCC"},
  "gray":{"50":"#F5F6F8","100":"#E9EBEF","200":"#D7D9DF","300":"#BDC0C7","400":"#A1A4AC","500":"#898B92","600":"#72747B","700":"#5D5F65","800":"#494A4E","900":"#35373A"},
  "red":{"50":"#FFE8E1","100":"#FFD1C5","200":"#FFAC9E","300":"#FF8477","400":"#FF5D53","500":"#F0443E","600":"#CC3430","700":"#AA2825","800":"#85201D","900":"#621A16"},
- "blue":{"50":"#DEF8FF","100":"#BFEFFF","200":"#91DDFF","300":"#63C2FF","400":"#36A4FF","500":"#1B8AFF","600":"#0A72DA","700":"#035EB6","800":"#07498E","900":"#0A3668"},
+ "amber":{"50":"#FFF8E1","100":"#FFECB3","200":"#FFE082","300":"#FFD54F","400":"#FFCA28","500":"#FFB300","600":"#FF8F00","700":"#F57C00","800":"#E65100","900":"#BF360C"},
  "green":{"50":"#E1FFE6","100":"#C4FBCE","200":"#99F1AC","300":"#6BDC88","400":"#3DC267","500":"#21A651","600":"#0E8C41","700":"#067334","800":"#095A28","900":"#0C421E"},
+ "blue":{"50":"#DEF8FF","100":"#BFEFFF","200":"#91DDFF","300":"#63C2FF","400":"#36A4FF","500":"#1B8AFF","600":"#0A72DA","700":"#035EB6","800":"#07498E","900":"#0A3668"},
 }
 color_ramps=color_scales
 

@@ -616,7 +616,7 @@
     // stored, not generated — buildRamp/curves remain only for optional
     // "auto-fill from OKLCH" convenience.
     color: {
-      order: ['black','white','black-alpha','white-alpha','gray','red','blue','green'],
+      order: ['black','white','black-alpha','white-alpha','gray','red','amber','green','blue'],
       scales: {
         black: { base:'#000000' },
         white: { base:'#FFFFFF' },
@@ -626,8 +626,9 @@
         'white-alpha': {'5':'#FFFFFF0D','10':'#FFFFFF1A','20':'#FFFFFF33','40':'#FFFFFF66','60':'#FFFFFF99','80':'#FFFFFFCC'},
         gray:{'50':'#F5F6F8','100':'#E9EBEF','200':'#D7D9DF','300':'#BDC0C7','400':'#A1A4AC','500':'#898B92','600':'#72747B','700':'#5D5F65','800':'#494A4E','900':'#35373A'},
         red:{'50':'#FFE8E1','100':'#FFD1C5','200':'#FFAC9E','300':'#FF8477','400':'#FF5D53','500':'#F0443E','600':'#CC3430','700':'#AA2825','800':'#85201D','900':'#621A16'},
-        blue:{'50':'#DEF8FF','100':'#BFEFFF','200':'#91DDFF','300':'#63C2FF','400':'#36A4FF','500':'#1B8AFF','600':'#0A72DA','700':'#035EB6','800':'#07498E','900':'#0A3668'},
-        green:{'50':'#E1FFE6','100':'#C4FBCE','200':'#99F1AC','300':'#6BDC88','400':'#3DC267','500':'#21A651','600':'#0E8C41','700':'#067334','800':'#095A28','900':'#0C421E'}
+        amber:{'50':'#FFF8E1','100':'#FFECB3','200':'#FFE082','300':'#FFD54F','400':'#FFCA28','500':'#FFB300','600':'#FF8F00','700':'#F57C00','800':'#E65100','900':'#BF360C'},
+        green:{'50':'#E1FFE6','100':'#C4FBCE','200':'#99F1AC','300':'#6BDC88','400':'#3DC267','500':'#21A651','600':'#0E8C41','700':'#067334','800':'#095A28','900':'#0C421E'},
+        blue:{'50':'#DEF8FF','100':'#BFEFFF','200':'#91DDFF','300':'#63C2FF','400':'#36A4FF','500':'#1B8AFF','600':'#0A72DA','700':'#035EB6','800':'#07498E','900':'#0A3668'}
       }
     },
     fontFamily: {
@@ -663,6 +664,7 @@
           border:'{color.gray.200}', 'border-strong':'{color.gray.300}', 'border-subtle':'{color.gray.100}', 'border-focus':'{color.blue.500}',
           primary:'{color.blue.600}', 'primary-hover':'{color.blue.700}', 'primary-active':'{color.blue.800}', 'primary-fg':'{color.white}', 'primary-subtle':'{color.blue.50}', 'focus-ring':'{color.blue.500}', accent:'{color.blue.500}',
           danger:'{color.red.600}', 'danger-fg':'{color.white}', 'danger-subtle':'{color.red.50}',
+          warning:'{color.amber.400}', 'warning-fg':'{color.gray.900}', 'warning-subtle':'{color.amber.50}',
           success:'{color.green.700}', 'success-fg':'{color.white}', 'success-subtle':'{color.green.50}',
           info:'{color.blue.600}', 'info-fg':'{color.white}', 'info-subtle':'{color.blue.50}'
         },
@@ -672,6 +674,7 @@
           border:'{color.gray.700}', 'border-strong':'{color.gray.600}', 'border-subtle':'{color.gray.800}', 'border-focus':'{color.blue.400}',
           primary:'{color.blue.600}', 'primary-hover':'{color.blue.500}', 'primary-active':'{color.blue.400}', 'primary-fg':'{color.white}', 'primary-subtle':'{color.blue.900}', 'focus-ring':'{color.blue.400}', accent:'{color.blue.400}',
           danger:'{color.red.600}', 'danger-fg':'{color.white}', 'danger-subtle':'{color.red.900}',
+          warning:'{color.amber.400}', 'warning-fg':'{color.gray.900}', 'warning-subtle':'{color.amber.900}',
           success:'{color.green.700}', 'success-fg':'{color.white}', 'success-subtle':'{color.green.900}',
           info:'{color.blue.600}', 'info-fg':'{color.white}', 'info-subtle':'{color.blue.900}'
         }
@@ -933,9 +936,9 @@
     { fg: 'text-link', bg: 'surface' }, { fg: 'text-muted', bg: 'bg' },
     // text-subtle / text-disabled are placeholder/disabled tier — WCAG-exempt, not checked.
     { fg: 'primary-fg', bg: 'primary' }, { fg: 'danger-fg', bg: 'danger' },
-    { fg: 'success-fg', bg: 'success' }, { fg: 'info-fg', bg: 'info' },
+    { fg: 'warning-fg', bg: 'warning' }, { fg: 'success-fg', bg: 'success' }, { fg: 'info-fg', bg: 'info' },
     { fg: 'text', bg: 'primary-subtle' }, { fg: 'text', bg: 'danger-subtle' },
-    { fg: 'text', bg: 'success-subtle' }, { fg: 'text', bg: 'info-subtle' }
+    { fg: 'text', bg: 'warning-subtle' }, { fg: 'text', bg: 'success-subtle' }, { fg: 'text', bg: 'info-subtle' }
   ];
   // Contrast of each semantic pair for one theme ('light'|'dark'). ratio is null
   // when either role is missing (deleted/renamed) or resolves to a translucent
@@ -2123,6 +2126,7 @@
       'primary-subtle': 'primary 옅은 배경(배너·태그)', 'focus-ring': '포커스 링', accent: '보조 강조색' } },
     { label: 'Status · 상태', roles: {
       danger: '위험·삭제·오류', 'danger-fg': 'danger 위 텍스트', 'danger-subtle': 'danger 옅은 배경',
+      warning: '주의·경고', 'warning-fg': 'warning 위 텍스트(어두운)', 'warning-subtle': 'warning 옅은 배경',
       success: '성공·완료', 'success-fg': 'success 위 텍스트', 'success-subtle': 'success 옅은 배경',
       info: '정보·안내', 'info-fg': 'info 위 텍스트', 'info-subtle': 'info 옅은 배경' } }
   ];

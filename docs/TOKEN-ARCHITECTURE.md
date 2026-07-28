@@ -97,7 +97,7 @@ core/figma-map.js    토큰 → Figma 변수/Effect/Text 스타일 매핑
 
 ```js
 color: {
-  order:  ['black','white','black-alpha','white-alpha','gray','red','blue','green'],
+  order:  ['black','white','black-alpha','white-alpha','gray','red','amber','green','blue'],
   scales: { black:{base:'#000000'}, white:{base:'#FFFFFF'}, gray:{'50':'#F5F6F8', ...}, ... }
 }
 ```
@@ -116,7 +116,7 @@ color: {
 
 ### 5.1 Color
 
-`color.order` = `black · white · black-alpha · white-alpha · gray · red · blue · green` (총 **8개 스케일**).
+`color.order` = `black · white · black-alpha · white-alpha · gray · red · amber · green · blue` (총 **9개 스케일**).
 
 | 스케일 | 종류 | steps / 값 |
 |---|---|---|
@@ -126,8 +126,9 @@ color: {
 | `white-alpha` | 알파 | 5 `#FFFFFF0D` · 10 `#FFFFFF1A` · 20 `#FFFFFF33` · 40 `#FFFFFF66` · 60 `#FFFFFF99` · 80 `#FFFFFFCC` |
 | `gray` | 다단계 (50–900) | 50 `#F5F6F8` · 100 `#E9EBEF` · 200 `#D7D9DF` · 300 `#BDC0C7` · 400 `#A1A4AC` · 500 `#898B92` · 600 `#72747B` · 700 `#5D5F65` · 800 `#494A4E` · 900 `#35373A` |
 | `red` | 다단계 (50–900) | 50 `#FFE8E1` · 100 `#FFD1C5` · 200 `#FFAC9E` · 300 `#FF8477` · 400 `#FF5D53` · 500 `#F0443E` · 600 `#CC3430` · 700 `#AA2825` · 800 `#85201D` · 900 `#621A16` |
-| `blue` | 다단계 (50–900) | 50 `#DEF8FF` · 100 `#BFEFFF` · 200 `#91DDFF` · 300 `#63C2FF` · 400 `#36A4FF` · 500 `#1B8AFF` · 600 `#0A72DA` · 700 `#035EB6` · 800 `#07498E` · 900 `#0A3668` |
+| `amber` | 다단계 (50–900) | 50 `#FFF8E1` · 100 `#FFECB3` · 200 `#FFE082` · 300 `#FFD54F` · 400 `#FFCA28` · 500 `#FFB300` · 600 `#FF8F00` · 700 `#F57C00` · 800 `#E65100` · 900 `#BF360C` |
 | `green` | 다단계 (50–900) | 50 `#E1FFE6` · 100 `#C4FBCE` · 200 `#99F1AC` · 300 `#6BDC88` · 400 `#3DC267` · 500 `#21A651` · 600 `#0E8C41` · 700 `#067334` · 800 `#095A28` · 900 `#0C421E` |
+| `blue` | 다단계 (50–900) | 50 `#DEF8FF` · 100 `#BFEFFF` · 200 `#91DDFF` · 300 `#63C2FF` · 400 `#36A4FF` · 500 `#1B8AFF` · 600 `#0A72DA` · 700 `#035EB6` · 800 `#07498E` · 900 `#0A3668` |
 
 > 참고: `DEFAULT_CONFIG.steps` = `[50…950]`(11단계)와 `curves.Lc/Cm`는 **선택적 OKLCH auto-fill 전용**이다. 실제 저장된 다단계 스케일은 **50–900(10단계)** 이며 `950`은 정의돼 있지 않다.
 
@@ -264,8 +265,9 @@ python3 build_apps.py     # ② core/* + 템플릿 조립 → tool/index.html, p
 | white | — | base |
 | gray | 600 | 500 |
 | red | 600 | 500 |
-| blue | 600 | 500 |
+| amber | 900 | 800 |
 | green | 700 | 600 |
+| blue | 600 | 500 |
 
 `contrastRatio`는 표준 상대휘도 공식(`relLuminance` sRGB 감마 역변환 + 0.2126/0.7152/0.0722 가중)으로 `(hi+0.05)/(lo+0.05)`.
 
@@ -285,7 +287,7 @@ node --test tool/tests/*.mjs
 |---|---|
 | `parity.test.mjs` | 익스포터 출력 === 커밋 파일 바이트 일치 (toDTCG↔tokens.json, toCSS↔tokens.css, toTailwind↔tailwind.preset.js, toFigma↔tokens.figma.json). **듀얼 SSOT 동기 강제.** |
 | `drift.test.mjs` | 생성 앱(`tool/index.html`, `plugin/ui.html`, `plugin/code.js`)이 `core/*` 소스를 verbatim 포함하는지 = `build_apps.py`를 다시 안 돌린 stale 상태 탐지. |
-| `core.test.mjs` | `pyRound`(banker's rounding), `hexof`(OKLCH→hex 알려진 blue step), `buildAllRamps`(저장된 수동 스케일 반환·order 길이 8), `cloneConfig` 독립성, `contrastReport`(GUIDE 결과 재현), `createStore`(setPath/undo/redo/dirty/resetGroup/subscribe). |
+| `core.test.mjs` | `pyRound`(banker's rounding), `hexof`(OKLCH→hex 알려진 blue step), `buildAllRamps`(저장된 수동 스케일 반환·order 길이 9), `cloneConfig` 독립성, `contrastReport`(GUIDE 결과 재현), `createStore`(setPath/undo/redo/dirty/resetGroup/subscribe). |
 | `figma-map.test.mjs` | `GROUP_KEYS` 14개(shadow 제외), `variablesPlan`(COLOR/FLOAT 단위 stripping/STRING, selection 필터, 멱등), `hexToFigmaRGB`, `shadowToEffects`(단일/다중/spread/rgb/hex6/hex3), `effectStylePlan`(shadow 순서), `textStylePlan`(size×weight, PERCENT, 스타일명 매핑·fallback). |
 | `roundtrip.test.mjs` | `index.html`에서 실제 `configFromDTCG`를 vm으로 추출해 실행 → DTCG 왕복 복원(14 direct 그룹 + color), 컬러 램프는 현재 cfg 보존(역산 아님), 잘못된 JSON은 throw 없이 error 결과, 누락/오형 그룹은 해당 그룹만 skip하고 나머지 복원. |
 | `plugin-apply.test.mjs` | `plugin/code.src.js`의 `applyPlan`을 figma mock으로 실행 → 변수/Effect/Text 스타일 생성이 **멱등**(재적용 시 중복 없이 갱신), 타입 변경 시 remove+recreate, 폰트 실패는 `failed[]`에만, targets 게이트, 결과 카운트(생성/갱신/실패). |

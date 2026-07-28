@@ -1127,6 +1127,7 @@
       'primary-subtle': 'primary 옅은 배경(배너·태그)', 'focus-ring': '포커스 링', accent: '보조 강조색' } },
     { label: 'Status · 상태', roles: {
       danger: '위험·삭제·오류', 'danger-fg': 'danger 위 텍스트', 'danger-subtle': 'danger 옅은 배경',
+      warning: '주의·경고', 'warning-fg': 'warning 위 텍스트(어두운)', 'warning-subtle': 'warning 옅은 배경',
       success: '성공·완료', 'success-fg': 'success 위 텍스트', 'success-subtle': 'success 옅은 배경',
       info: '정보·안내', 'info-fg': 'info 위 텍스트', 'info-subtle': 'info 옅은 배경' } }
   ];

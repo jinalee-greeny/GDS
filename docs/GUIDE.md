@@ -24,7 +24,7 @@ tokens/tokens.json   ← 여기만 관리 (SSOT)
 
 | 카테고리 | 스케일 |
 |---|---|
-| Color | black · white · black-alpha · white-alpha · gray · red · blue · green (자유 편집 스케일) |
+| Color | black · white · black-alpha · white-alpha · gray · red · amber · green · blue (자유 편집 스케일) |
 | Font family | sans(Pretendard) · serif(Nanum Myeongjo 계열) · mono(system/coding) 3 슬롯, 교체 가능 |
 | Font size | xs–6xl (12–60px, 최소 12 · base 16, 정수 커브) |
 | Font weight | regular·medium·semibold·bold |
@@ -66,5 +66,6 @@ tokens/tokens.json   ← 여기만 관리 (SSOT)
 | white | — | base |
 | gray | 600 | 500 |
 | red | 600 | 500 |
-| blue | 600 | 500 |
+| amber | 900 | 800 |
 | green | 700 | 600 |
+| blue | 600 | 500 |

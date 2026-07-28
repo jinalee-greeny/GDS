@@ -33,7 +33,7 @@ test('buildAllRamps returns the stored manual scales', () => {
   assert.equal(JSON.stringify(ramps.black), JSON.stringify({ base: '#000000' }));
   // alpha scales carry #RRGGBBAA values
   assert.equal(ramps['black-alpha']['40'], '#00000066');
-  assert.equal(core.DEFAULT_CONFIG.color.order.length, 8);
+  assert.equal(core.DEFAULT_CONFIG.color.order.length, 9);
 });
 
 test('cloneConfig returns an independent deep copy', () => {
