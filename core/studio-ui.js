@@ -1468,25 +1468,32 @@
   // Complements the primitive palette check under Scale › Accessibility.
   function renderSemanticA11y(cfg) {
     function badge(ok) { return el('span', { class: ok ? 'badge-pass' : 'badge-fail' }, [ok ? '✓' : '✕']); }
+    function rowFor(r) {
+      var na = r.ratio == null;
+      var sample = na
+        ? el('div', { class: 'sem-a11y-sample sem-a11y-sample-na', text: '—' })
+        : el('div', { class: 'sem-a11y-sample', style: 'background:' + r.bgHex + ';color:' + r.fgHex }, ['Aa']);
+      return el('tr', {}, [
+        el('td', {}, [sample]),
+        el('td', { class: 'sem-a11y-pair' }, [
+          el('span', { text: r.fg }), el('span', { class: 'sem-a11y-on', text: ' on ' }), el('span', { text: r.bg })
+        ]),
+        el('td', { class: 'sem-a11y-ratio', text: na ? 'n/a' : (Math.round(r.ratio * 10) / 10).toFixed(1) + ':1' }),
+        el('td', {}, [na ? el('span', { class: 'sem-a11y-skip', text: '—' }) : badge(r.ratio >= 4.5)]),
+        el('td', {}, [na ? el('span', { class: 'sem-a11y-skip', text: '—' }) : badge(r.ratio >= 3)])
+      ]);
+    }
     function themeTable(theme) {
       var rep = C.semanticContrastReport(cfg, theme);
       var head = el('tr', {}, ['샘플', 'Pair', '대비', 'Normal · AA 4.5', 'Large · AA 3']
         .map(function (t) { return el('th', { text: t }); }));
-      var rows = rep.map(function (r) {
-        var na = r.ratio == null;
-        var sample = na
-          ? el('div', { class: 'sem-a11y-sample sem-a11y-sample-na', text: '—' })
-          : el('div', { class: 'sem-a11y-sample', style: 'background:' + r.bgHex + ';color:' + r.fgHex }, ['Aa']);
-        var ratioCell = el('td', { class: 'sem-a11y-ratio', text: na ? 'n/a' : (Math.round(r.ratio * 10) / 10).toFixed(1) + ':1' });
-        return el('tr', {}, [
-          el('td', {}, [sample]),
-          el('td', { class: 'sem-a11y-pair' }, [
-            el('span', { text: r.fg }), el('span', { class: 'sem-a11y-on', text: ' on ' }), el('span', { text: r.bg })
-          ]),
-          ratioCell,
-          el('td', {}, [na ? el('span', { class: 'sem-a11y-skip', text: '—' }) : badge(r.ratio >= 4.5)]),
-          el('td', {}, [na ? el('span', { class: 'sem-a11y-skip', text: '—' }) : badge(r.ratio >= 3)])
-        ]);
+      // group rows by category, inserting a labeled header row before each group
+      var order = [], byCat = {};
+      rep.forEach(function (r) { var k = r.cat || '·'; if (!byCat[k]) { byCat[k] = []; order.push(k); } byCat[k].push(r); });
+      var rows = [];
+      order.forEach(function (cat) {
+        rows.push(el('tr', { class: 'sem-a11y-cat' }, [el('td', { colspan: '5', text: cat })]));
+        byCat[cat].forEach(function (r) { rows.push(rowFor(r)); });
       });
       return el('div', { class: 'sem-a11y-theme' }, [
         el('h4', { class: 'sem-a11y-th', text: theme === 'light' ? 'Light' : 'Dark' }),

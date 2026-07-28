@@ -363,15 +363,19 @@
   // The foreground↔background role pairs the semantic layer actually prescribes.
   // Contrast is meaningful only for these real combinations (not primitive steps).
   var SEMANTIC_PAIRS = [
-    { fg: 'text', bg: 'bg' }, { fg: 'text', bg: 'surface' }, { fg: 'text-muted', bg: 'surface' },
-    { fg: 'text-link', bg: 'surface' }, { fg: 'text-muted', bg: 'bg' },
-    // text-subtle / text-disabled are placeholder/disabled tier — WCAG-exempt, not checked.
-    { fg: 'primary-fg', bg: 'primary' }, { fg: 'primary-fg', bg: 'primary-hover' }, { fg: 'primary-fg', bg: 'primary-active' },
-    { fg: 'danger-fg', bg: 'danger' },
-    { fg: 'warning-fg', bg: 'warning' }, { fg: 'success-fg', bg: 'success' }, { fg: 'info-fg', bg: 'info' },
-    { fg: 'text', bg: 'primary-subtle' },
-    { fg: 'danger-on-subtle', bg: 'danger-subtle' }, { fg: 'warning-on-subtle', bg: 'warning-subtle' },
-    { fg: 'success-on-subtle', bg: 'success-subtle' }, { fg: 'info-on-subtle', bg: 'info-subtle' }
+    // Text on surfaces (text-subtle / text-disabled are placeholder tier — WCAG-exempt, not checked)
+    { cat: 'Text', fg: 'text', bg: 'bg' }, { cat: 'Text', fg: 'text', bg: 'surface' },
+    { cat: 'Text', fg: 'text-muted', bg: 'surface' }, { cat: 'Text', fg: 'text-muted', bg: 'bg' },
+    { cat: 'Text', fg: 'text-link', bg: 'surface' },
+    // Interactive — button text must stay readable across states
+    { cat: 'Interactive', fg: 'primary-fg', bg: 'primary' }, { cat: 'Interactive', fg: 'primary-fg', bg: 'primary-hover' }, { cat: 'Interactive', fg: 'primary-fg', bg: 'primary-active' },
+    // Status — solid intent surface + its fg
+    { cat: 'Status', fg: 'danger-fg', bg: 'danger' }, { cat: 'Status', fg: 'warning-fg', bg: 'warning' },
+    { cat: 'Status', fg: 'success-fg', bg: 'success' }, { cat: 'Status', fg: 'info-fg', bg: 'info' },
+    // Banner — colored/neutral text on the subtle tint
+    { cat: 'Banner', fg: 'text', bg: 'primary-subtle' },
+    { cat: 'Banner', fg: 'danger-on-subtle', bg: 'danger-subtle' }, { cat: 'Banner', fg: 'warning-on-subtle', bg: 'warning-subtle' },
+    { cat: 'Banner', fg: 'success-on-subtle', bg: 'success-subtle' }, { cat: 'Banner', fg: 'info-on-subtle', bg: 'info-subtle' }
   ];
   // Contrast of each semantic pair for one theme ('light'|'dark'). ratio is null
   // when either role is missing (deleted/renamed) or resolves to a translucent
@@ -382,7 +386,7 @@
       var fg = res[p.fg], bg = res[p.bg];
       var undef = !fg || !bg ||
         (typeof fg === 'string' && fg.length === 9) || (typeof bg === 'string' && bg.length === 9);
-      return { fg: p.fg, bg: p.bg, fgHex: fg || null, bgHex: bg || null, ratio: undef ? null : contrastRatio(fg, bg) };
+      return { cat: p.cat, fg: p.fg, bg: p.bg, fgHex: fg || null, bgHex: bg || null, ratio: undef ? null : contrastRatio(fg, bg) };
     });
   }
 
