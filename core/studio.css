@@ -335,6 +335,18 @@
   .sem-group-head { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 2px 0 10px; }
   .sem-group .sem-row + .sem-row { margin-top: 8px; }
 
+  /* paired color rows: role | light (swatch+select) | dark (swatch+select) | del */
+  .sem-row-paired { align-items: flex-start; }
+  .sem-row-paired .sem-namecol { flex: 0 1 160px; }
+  .sem-pair { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 8px; }
+  .sem-pair .sem-select { flex: 1 1 auto; min-width: 0; }
+  .sem-col-del { flex: 0 0 auto; width: var(--sem-h, 34px); }
+  .sem-color-head { align-items: center; margin-bottom: 2px; }
+  .sem-color-head > * { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted-2); }
+  .sem-pv-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+  .sem-pv-head .sem-pv-heading { margin: 0; }
+  .sem-pv-head .sem-theme-toggle { margin-bottom: 0; }
+
   .sem-editor-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
   .sem-editor-head-end { justify-content: flex-end; }
   .sem-editor-head .sem-theme-toggle { margin-bottom: 0; }

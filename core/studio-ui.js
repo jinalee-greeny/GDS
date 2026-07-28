@@ -1217,8 +1217,15 @@
     return next;
   }
 
-  function semColorRow(cfg, role, ref, opts, use) {
-    var sel = refSelect(ref, opts, function (v) { updateSemantic(function (s) { s.color[semanticTheme][role] = v; }); });
+  // One role, both themes paired: [name+caption] [light swatch+select] [dark swatch+select] [del].
+  function semColorRow(cfg, role, use, opts) {
+    function pair(theme) {
+      var ref = (cfg.semantic.color[theme] || {})[role];
+      return el('div', { class: 'sem-pair' }, [
+        semSwatch(C.resolveRef(cfg, ref)),
+        refSelect(ref, opts, function (v) { updateSemantic(function (s) { s.color[theme][role] = v; }); })
+      ]);
+    }
     var nameCol = semNameCol(role, use, function (nn) {
       updateSemantic(function (s) {
         s.color.light = renameKeyInPlace(s.color.light, role, nn);
@@ -1228,23 +1235,29 @@
     var del = semDelBtn('Delete role ' + role, function () {
       updateSemantic(function (s) { delete s.color.light[role]; delete s.color.dark[role]; });
     });
-    return el('div', { class: 'sem-row' }, [semSwatch(C.resolveRef(cfg, ref)), nameCol, sel, del]);
+    return el('div', { class: 'sem-row sem-row-paired' }, [nameCol, pair('light'), pair('dark'), del]);
   }
   function renderSemanticColorModule(cfg) {
     var opts = colorRefOptions(cfg);
-    var set = (cfg.semantic.color[semanticTheme]) || {};
+    var set = (cfg.semantic.color.light) || {}; // both themes share role keys
     var placed = {};
+    var header = el('div', { class: 'sem-row sem-row-paired sem-color-head' }, [
+      el('div', { class: 'sem-namecol', text: 'Role' }),
+      el('div', { class: 'sem-pair', text: 'Light' }),
+      el('div', { class: 'sem-pair', text: 'Dark' }),
+      el('div', { class: 'sem-col-del' })
+    ]);
     // Grouped-by-context sections; only roles actually present are shown.
     var sections = SEM_COLOR_GROUPS.map(function (g) {
       var keys = Object.keys(g.roles).filter(function (r) { return set.hasOwnProperty(r); });
       if (!keys.length) return null;
-      var rows = keys.map(function (role) { placed[role] = true; return semColorRow(cfg, role, set[role], opts, g.roles[role]); });
+      var rows = keys.map(function (role) { placed[role] = true; return semColorRow(cfg, role, g.roles[role], opts); });
       return el('div', { class: 'sem-group' }, [el('div', { class: 'sem-group-head', text: g.label })].concat(rows));
     }).filter(Boolean);
     // Any role not in a known group (custom / renamed) lands here.
     var custom = Object.keys(set).filter(function (r) { return !placed[r]; });
     if (custom.length) {
-      var crows = custom.map(function (role) { return semColorRow(cfg, role, set[role], opts, ''); });
+      var crows = custom.map(function (role) { return semColorRow(cfg, role, '', opts); });
       sections.push(el('div', { class: 'sem-group' }, [el('div', { class: 'sem-group-head', text: 'Custom · 사용자 정의' })].concat(crows)));
     }
     var add = el('button', { type: 'button', class: 'kv-add-row', onclick: function () {
@@ -1253,7 +1266,7 @@
         s.color.light[k] = '{color.gray.900}'; s.color.dark[k] = '{color.gray.50}';
       });
     } }, iconLabel('plus', 'Add role'));
-    return el('div', { class: 'sem-rows' }, sections.concat([add]));
+    return el('div', { class: 'sem-rows' }, [header].concat(sections).concat([add]));
   }
 
   function renderSemanticTextModule(cfg) {
@@ -1375,18 +1388,20 @@
       }
     }, iconLabel('reset', 'Reset'));
   }
+  // Light/Dark toggle — now drives the color preview only (the editor pairs both).
+  function semThemeToggle() {
+    return el('div', { class: 'sem-theme-toggle', role: 'tablist', 'aria-label': 'Preview theme' },
+      ['light', 'dark'].map(function (t) {
+        return el('button', {
+          type: 'button', class: 'sem-theme-tab', role: 'tab', 'aria-selected': t === semanticTheme ? 'true' : 'false',
+          onclick: function () { semanticTheme = t; render(); }
+        }, [t === 'light' ? 'Light' : 'Dark']);
+      }));
+  }
   function renderSemanticEditor(cfg, moduleKey) {
-    if (moduleKey === 'color') {
-      var toggle = el('div', { class: 'sem-theme-toggle', role: 'tablist', 'aria-label': 'Theme' },
-        ['light', 'dark'].map(function (t) {
-          return el('button', {
-            type: 'button', class: 'sem-theme-tab', role: 'tab', 'aria-selected': t === semanticTheme ? 'true' : 'false',
-            onclick: function () { semanticTheme = t; render(); }
-          }, [t === 'light' ? 'Light' : 'Dark']);
-        }));
-      return el('div', {}, [el('div', { class: 'sem-editor-head' }, [toggle, semResetBtn('color')]), renderSemanticColorModule(cfg)]);
-    }
-    var body = moduleKey === 'text' ? renderSemanticTextModule(cfg) : renderSemanticScalarModule(cfg, moduleKey);
+    var body = moduleKey === 'color' ? renderSemanticColorModule(cfg)
+      : moduleKey === 'text' ? renderSemanticTextModule(cfg)
+      : renderSemanticScalarModule(cfg, moduleKey);
     return el('div', {}, [el('div', { class: 'sem-editor-head sem-editor-head-end' }, [semResetBtn(moduleKey)]), body]);
   }
 
@@ -1440,7 +1455,7 @@
     var previewNode;
     if (moduleKey === 'color') {
       previewNode = el('div', { class: 'sem-preview-col' }, [
-        el('h3', { class: 'sem-pv-heading', text: 'Preview · ' + (semanticTheme === 'light' ? 'Light' : 'Dark') }),
+        el('div', { class: 'sem-pv-head' }, [el('h3', { class: 'sem-pv-heading', text: 'Preview' }), semThemeToggle()]),
         renderSemanticPreview(cfg, semanticTheme)
       ]);
     } else if (moduleKey === 'text') {
