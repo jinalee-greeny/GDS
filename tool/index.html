@@ -373,6 +373,16 @@
   .sem-type-frame { display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
   .sem-type-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 
+  /* radius/shadow/space specimen (Preview column for those modules) */
+  .sem-sp-frame { padding: 20px; border-radius: 12px; border: 1px solid var(--border); display: flex; flex-direction: column; gap: 16px; }
+  .sem-sp-item { display: flex; align-items: center; gap: 14px; }
+  .sem-sp-swatch { flex: 0 0 auto; width: 46px; height: 46px; }
+  .sem-sp-label { font-size: 13px; color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .sem-sp-inset { flex: 0 0 auto; display: inline-flex; border-radius: 6px; }
+  .sem-sp-inset-fill { width: 30px; height: 22px; border-radius: 4px; }
+  .sem-sp-gap { flex: 0 0 auto; display: flex; align-items: center; }
+  .sem-sp-blk { flex: 0 0 auto; width: 22px; height: 22px; border-radius: 4px; }
+
   /* color specimen: a surface card on the bg canvas, exercising many roles */
   .sem-pv-frame { display: flex; flex-direction: column; gap: 12px; }
   .sem-surface { padding: 16px; border-radius: 10px; }
@@ -2404,12 +2414,37 @@
     return el('div', { class: 'sem-type-frame', style: 'background:' + (c.bg || '#fff') }, lines);
   }
 
+  // Specimen for radius/shadow/space: each role rendered as its applied effect
+  // over the semantic light surface, so the set is seen in context.
+  function renderSemanticScalarPreview(cfg, grp) {
+    var res = C.resolveSemantic(cfg), set = res[grp] || {}, c = res.color.light || {};
+    var items = Object.keys(set).map(function (role) {
+      var val = set[role], demo;
+      if (grp === 'radius') {
+        demo = el('div', { class: 'sem-sp-swatch', style: 'border-radius:' + (val || '0') + ';background:' + (c['primary-subtle'] || 'var(--surface-sunken)') + ';border:1px solid ' + (c.border || 'var(--border)') });
+      } else if (grp === 'shadow') {
+        demo = el('div', { class: 'sem-sp-swatch', style: 'box-shadow:' + (val || 'none') + ';background:' + (c['surface-raised'] || '#fff') + ';border:1px solid ' + (c.border || 'var(--border)') });
+      } else { // space
+        if (role.indexOf('inset') === 0) {
+          demo = el('div', { class: 'sem-sp-inset', style: 'padding:' + (val || '0') + ';background:' + (c['surface-sunken'] || 'var(--surface-sunken)') },
+            [el('div', { class: 'sem-sp-inset-fill', style: 'background:' + (c.primary || 'var(--accent)') })]);
+        } else {
+          demo = el('div', { class: 'sem-sp-gap' }, [
+            el('div', { class: 'sem-sp-blk', style: 'background:' + (c.primary || 'var(--accent)') }),
+            el('div', { class: 'sem-sp-blk', style: 'margin-left:' + (val || '0') + ';background:' + (c.primary || 'var(--accent)') })
+          ]);
+        }
+      }
+      return el('div', { class: 'sem-sp-item' }, [demo, el('span', { class: 'sem-sp-label', text: role })]);
+    });
+    return el('div', { class: 'sem-sp-frame sem-sp-' + grp, style: 'background:' + (c.bg || '#fff') }, items);
+  }
+
   // Semantic domain view for one module. The domain nav (Color/Text/…) selects
-  // the module. Color/Text get a meaningful preview column; Radius/Shadow/Space
-  // rely on their inline row previews and take the full width.
+  // the module; each gets a preview column showing its tokens applied in context.
   function renderSemanticView(cfg, moduleKey) {
     var editorCol = el('div', { class: 'sem-editor-col' }, [renderSemanticEditor(cfg, moduleKey)]);
-    var previewNode = null;
+    var previewNode;
     if (moduleKey === 'color') {
       previewNode = el('div', { class: 'sem-preview-col' }, [
         el('h3', { class: 'sem-pv-heading', text: 'Preview · ' + (semanticTheme === 'light' ? 'Light' : 'Dark') }),
@@ -2420,8 +2455,13 @@
         el('h3', { class: 'sem-pv-heading', text: 'Preview' }),
         renderSemanticTypeSpecimen(cfg)
       ]);
+    } else {
+      previewNode = el('div', { class: 'sem-preview-col' }, [
+        el('h3', { class: 'sem-pv-heading', text: 'Preview' }),
+        renderSemanticScalarPreview(cfg, moduleKey)
+      ]);
     }
-    var body = previewNode ? el('div', { class: 'sem-layout' }, [previewNode, editorCol]) : editorCol;
+    var body = el('div', { class: 'sem-layout' }, [previewNode, editorCol]);
     return el('div', { class: 'pv-block sem-view' }, [
       el('h3', { text: 'Semantic · ' + moduleKey.charAt(0).toUpperCase() + moduleKey.slice(1) }),
       el('p', { class: 'pv-hint', text: '역할(role) → primitive 참조. 컬러만 Light/Dark 두 세트, 나머지는 단일. primitive를 바꾸면 참조가 자동 반영됩니다. ⚠ 는 깨진 참조.' }),

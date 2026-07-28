@@ -362,6 +362,16 @@
   .sem-type-frame { display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
   .sem-type-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 
+  /* radius/shadow/space specimen (Preview column for those modules) */
+  .sem-sp-frame { padding: 20px; border-radius: 12px; border: 1px solid var(--border); display: flex; flex-direction: column; gap: 16px; }
+  .sem-sp-item { display: flex; align-items: center; gap: 14px; }
+  .sem-sp-swatch { flex: 0 0 auto; width: 46px; height: 46px; }
+  .sem-sp-label { font-size: 13px; color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .sem-sp-inset { flex: 0 0 auto; display: inline-flex; border-radius: 6px; }
+  .sem-sp-inset-fill { width: 30px; height: 22px; border-radius: 4px; }
+  .sem-sp-gap { flex: 0 0 auto; display: flex; align-items: center; }
+  .sem-sp-blk { flex: 0 0 auto; width: 22px; height: 22px; border-radius: 4px; }
+
   /* color specimen: a surface card on the bg canvas, exercising many roles */
   .sem-pv-frame { display: flex; flex-direction: column; gap: 12px; }
   .sem-surface { padding: 16px; border-radius: 10px; }
