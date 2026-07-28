@@ -37,18 +37,29 @@ for n in color_names:
     report.append(f"| {n} | {ow} | {ob} |")
 contrast_md="\n".join(report)
 
-# reference integrity: primitive layer -> all raw, no aliases. check no $value startswith {
-broken=[]
+# reference integrity: primitives are raw; the semantic layer aliases them. Every
+# alias {a.b.c} must resolve to a real token in the doc.
+def resolve_alias(ref):
+    node=T
+    for p in ref.strip()[1:-1].split("."):
+        if isinstance(node,dict) and p in node: node=node[p]
+        else: return False
+    return isinstance(node,dict) and "$value" in node
+broken=[]; alias_count=0
 def walk(node,path=""):
+    global alias_count
     if isinstance(node,dict):
         if "$value" in node:
             v=node["$value"]
-            if isinstance(v,str) and v.strip().startswith("{"): broken.append(path)
+            if isinstance(v,str) and v.strip().startswith("{"):
+                alias_count+=1
+                if not resolve_alias(v): broken.append(path)
         else:
             for k,vv in node.items():
                 if not k.startswith("$"): walk(vv,f"{path}.{k}")
 walk(T)
-integrity="✅ 참조 무결성: 모든 토큰이 원시값(alias 없음) — 깨진 참조 0건." if not broken else f"⚠️ 깨진 참조: {broken}"
+integrity=(f"✅ 참조 무결성: primitive는 원시값, semantic alias {alias_count}개 모두 유효 — 깨진 참조 0건."
+           if not broken else f"⚠️ 깨진 참조: {broken}")
 
 # ---------- styleguide.html ----------
 def sw(hex):

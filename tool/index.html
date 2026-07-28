@@ -876,6 +876,31 @@
     Object.keys(obj).forEach(function (k) { out[k] = { $type: ttype, $value: obj[k] }; });
     return out;
   }
+  // Semantic refs become DTCG alias tokens. font* groups live under font.* in the
+  // DTCG doc, so remap the path; the $type mirrors the aliased primitive's type.
+  var DTCG_TYPE = { color: 'color', fontSize: 'dimension', fontWeight: 'fontWeight', fontFamily: 'fontFamily',
+    lineHeight: 'number', letterSpacing: 'dimension', space: 'dimension', radius: 'dimension', shadow: 'shadow' };
+  var DTCG_FONT_PATH = { fontSize: 'font.size', fontWeight: 'font.weight', fontFamily: 'font.family' };
+  function semTokenDTCG(ref) {
+    if (typeof ref !== 'string') return null;
+    var m = /^\{(.+)\}$/.exec(ref.trim());
+    if (!m) return null;
+    var parts = m[1].split('.'), t = DTCG_TYPE[parts[0]];
+    if (!t) return null;
+    var base = DTCG_FONT_PATH[parts[0]];
+    var path = base ? base + (parts.length > 1 ? '.' + parts.slice(1).join('.') : '') : m[1];
+    return { $type: t, $value: '{' + path + '}' };
+  }
+  function semanticDTCG(cfg) {
+    var sem = cfg.semantic; if (!sem) return undefined;
+    function mapSet(set) { var o = {}; Object.keys(set).forEach(function (r) { var t = semTokenDTCG(set[r]); if (t) o[r] = t; }); return o; }
+    var out = { color: { light: mapSet((sem.color && sem.color.light) || {}), dark: mapSet((sem.color && sem.color.dark) || {}) }, text: {} };
+    Object.keys(sem.text || {}).forEach(function (role) { out.text[role] = mapSet(sem.text[role]); });
+    out.radius = mapSet(sem.radius || {});
+    out.shadow = mapSet(sem.shadow || {});
+    out.space = mapSet(sem.space || {});
+    return out;
+  }
   function toDTCG(cfg) {
     var ramps = buildAllRamps(cfg);
     var color = {};
@@ -900,7 +925,8 @@
       zIndex: grp(cfg.zIndex, 'number'),
       breakpoint: grp(cfg.breakpoint, 'dimension'),
       duration: grp(cfg.duration, 'duration'),
-      easing: grp(cfg.easing, 'cubicBezier')
+      easing: grp(cfg.easing, 'cubicBezier'),
+      semantic: semanticDTCG(cfg)
     };
     return JSON.stringify(dtcg, null, 2);
   }

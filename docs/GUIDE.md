@@ -54,7 +54,7 @@ tokens/tokens.json   ← 여기만 관리 (SSOT)
 
 ## 검증 리포트
 
-✅ 참조 무결성: 모든 토큰이 원시값(alias 없음) — 깨진 참조 0건.
+✅ 참조 무결성: primitive는 원시값, semantic alias 164개 모두 유효 — 깨진 참조 0건.
 
 ## 접근성(대비) 검증 — WCAG AA 4.5:1 기준
 
