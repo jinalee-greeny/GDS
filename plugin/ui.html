@@ -363,15 +363,27 @@
   .sem-type-frame { display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
   .sem-type-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 
-  /* color specimen: a surface card on the bg canvas */
+  /* color specimen: a surface card on the bg canvas, exercising many roles */
+  .sem-pv-frame { display: flex; flex-direction: column; gap: 12px; }
   .sem-surface { padding: 16px; border-radius: 10px; }
   .sem-pv-title { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
-  .sem-pv-body { font-size: 14px; margin-bottom: 14px; }
-  .sem-pv-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
-  .sem-pv-btn { border: none; border-radius: 8px; padding: 8px 14px; font-weight: 600; font-size: 13px; }
+  .sem-pv-body { font-size: 14px; margin-bottom: 8px; }
+  .sem-pv-minor { display: flex; gap: 12px; font-size: 12px; margin-bottom: 12px; }
+  .sem-pv-input { border-radius: 8px; padding: 8px 10px; font-size: 13px; margin-bottom: 8px; }
+  .sem-pv-code { border-radius: 8px; padding: 8px 10px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; margin-bottom: 12px; }
+  .sem-pv-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .sem-pv-btn { border: none; border-radius: 8px; padding: 7px 12px; font-weight: 600; font-size: 12px; }
   .sem-pv-btn-ghost { background: transparent; }
   .sem-pv-chips { display: flex; gap: 6px; flex-wrap: wrap; }
   .sem-chip { border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 600; }
+  /* status banners on *-subtle backgrounds */
+  .sem-pv-banners { display: flex; flex-direction: column; gap: 6px; }
+  .sem-pv-banner { display: flex; align-items: center; gap: 8px; border-radius: 8px; padding: 8px 12px; font-size: 13px; }
+  .sem-pv-dot { flex: 0 0 auto; width: 8px; height: 8px; border-radius: 999px; }
+  /* raised surface + overlay scrim */
+  .sem-pv-extras { display: flex; gap: 8px; }
+  .sem-pv-raised { flex: 1 1 auto; border-radius: 8px; padding: 10px 12px; font-size: 12px; box-shadow: 0 6px 16px rgba(0,0,0,.12); }
+  .sem-pv-overlay { flex: 0 0 auto; display: flex; align-items: center; justify-content: center; width: 96px; border-radius: 8px; font-size: 11px; font-weight: 600; }
 
   .pv-block { border: 1px solid var(--border); border-radius: var(--radius-card); margin-bottom: 20px; padding: 24px; background: var(--surface); scroll-margin-top: 16px; }
   /* Fixed jump-nav header (not sticky-in-scroll; it's a flex sibling above the
@@ -2293,28 +2305,62 @@
     return el('div', { class: 'sem-rows' }, rows.concat([add]));
   }
 
-  // Live specimen card rendered from the resolved semantic colors of `theme`.
+  // Live specimen rendered from the resolved semantic colors of `theme`. Exercises
+  // a broad slice of the palette (surfaces, text variants, borders, intents +
+  // states, subtle banners, focus, overlay) so most roles are visually verified.
   function renderSemanticPreview(cfg, theme) {
     var c = C.resolveSemantic(cfg).color[theme] || {};
     function v(k, fb) { return c[k] || fb || 'transparent'; }
-    var chip = function (bg, fg, label) {
-      return el('span', { class: 'sem-chip', style: 'background:' + bg + ';color:' + fg }, [label]);
-    };
-    var card = el('div', { class: 'sem-surface', style: 'background:' + v('surface') + ';border:1px solid ' + v('border') + ';border-radius:10px' }, [
+    function btn(bg, fg, label) { return el('button', { type: 'button', class: 'sem-pv-btn', style: 'background:' + bg + ';color:' + fg }, [label]); }
+    function banner(bg, dot, label) {
+      return el('div', { class: 'sem-pv-banner', style: 'background:' + bg }, [
+        el('span', { class: 'sem-pv-dot', style: 'background:' + dot }),
+        el('span', { style: 'color:' + v('text'), text: label })
+      ]);
+    }
+    // Main surface card
+    var card = el('div', { class: 'sem-surface', style: 'background:' + v('surface') + ';border:1px solid ' + v('border') }, [
       el('div', { class: 'sem-pv-title', style: 'color:' + v('text'), text: 'Surface title' }),
-      el('div', { class: 'sem-pv-body', style: 'color:' + v('text-muted'), text: 'Muted body text on a surface panel.' }),
+      el('div', { class: 'sem-pv-body', style: 'color:' + v('text-muted') }, [
+        'Muted body with a ',
+        el('a', { href: '#', onclick: function (e) { e.preventDefault(); }, style: 'color:' + v('text-link') + ';text-decoration:underline', text: 'link' }),
+        ' inline.'
+      ]),
+      el('div', { class: 'sem-pv-minor' }, [
+        el('span', { style: 'color:' + v('text-subtle'), text: 'Subtle caption' }),
+        el('span', { style: 'color:' + v('text-disabled'), text: 'Disabled' })
+      ]),
+      // focused input (border-focus ring) with a placeholder (text-subtle)
+      el('div', { class: 'sem-pv-input', style: 'background:' + v('bg') + ';border:1px solid ' + v('border-focus') + ';box-shadow:0 0 0 3px ' + v('focus-ring') + '33;color:' + v('text-subtle'), text: 'Focused input…' }),
+      // sunken code block
+      el('div', { class: 'sem-pv-code', style: 'background:' + v('surface-sunken') + ';border:1px solid ' + v('border-subtle') + ';color:' + v('text'), text: 'const x = 1' }),
       el('div', { class: 'sem-pv-btns' }, [
-        el('button', { type: 'button', class: 'sem-pv-btn', style: 'background:' + v('primary') + ';color:' + v('primary-fg') }, ['Primary']),
-        el('button', { type: 'button', class: 'sem-pv-btn', style: 'background:' + v('danger') + ';color:' + v('danger-fg') }, ['Danger']),
-        el('button', { type: 'button', class: 'sem-pv-btn sem-pv-btn-ghost', style: 'color:' + v('text') + ';border:1px solid ' + v('border') }, ['Ghost'])
+        btn(v('primary'), v('primary-fg'), 'Primary'),
+        btn(v('danger'), v('danger-fg'), 'Danger'),
+        btn(v('warning'), v('warning-fg'), 'Warning'),
+        btn(v('success'), v('success-fg'), 'Success'),
+        el('button', { type: 'button', class: 'sem-pv-btn sem-pv-btn-ghost', style: 'color:' + v('text') + ';border:1px solid ' + v('border-strong') }, ['Ghost'])
       ]),
       el('div', { class: 'sem-pv-chips' }, [
-        chip(v('success'), v('success-fg'), 'success'),
-        chip(v('info'), v('info-fg'), 'info'),
-        chip(v('accent'), v('primary-fg'), 'accent')
+        el('span', { class: 'sem-chip', style: 'background:' + v('primary-subtle') + ';color:' + v('text'), text: 'tag' }),
+        el('span', { class: 'sem-chip', style: 'background:' + v('accent') + ';color:' + v('primary-fg'), text: 'accent' })
       ])
     ]);
-    return el('div', { class: 'sem-pv-frame', style: 'background:' + v('bg') }, [card]);
+    // Status banners on *-subtle backgrounds
+    var banners = el('div', { class: 'sem-pv-banners' }, [
+      banner(v('danger-subtle'), v('danger'), 'Danger message'),
+      banner(v('warning-subtle'), v('warning'), 'Warning message'),
+      banner(v('success-subtle'), v('success'), 'Success message'),
+      banner(v('info-subtle'), v('info'), 'Info message')
+    ]);
+    // Raised surface chip + overlay scrim swatch
+    var extras = el('div', { class: 'sem-pv-extras' }, [
+      el('div', { class: 'sem-pv-raised', style: 'background:' + v('surface-raised') + ';border:1px solid ' + v('border') + ';color:' + v('text-muted'), text: 'surface-raised' }),
+      el('div', { class: 'sem-pv-overlay', style: 'background:' + v('overlay'), title: 'overlay' }, [
+        el('span', { style: 'color:' + v('text-inverse'), text: 'overlay' })
+      ])
+    ]);
+    return el('div', { class: 'sem-pv-frame', style: 'background:' + v('bg') }, [card, banners, extras]);
   }
 
   function renderSemanticEditor(cfg, moduleKey) {

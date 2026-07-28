@@ -359,15 +359,27 @@
   .sem-type-frame { display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
   .sem-type-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 
-  /* color specimen: a surface card on the bg canvas */
+  /* color specimen: a surface card on the bg canvas, exercising many roles */
+  .sem-pv-frame { display: flex; flex-direction: column; gap: 12px; }
   .sem-surface { padding: 16px; border-radius: 10px; }
   .sem-pv-title { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
-  .sem-pv-body { font-size: 14px; margin-bottom: 14px; }
-  .sem-pv-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
-  .sem-pv-btn { border: none; border-radius: 8px; padding: 8px 14px; font-weight: 600; font-size: 13px; }
+  .sem-pv-body { font-size: 14px; margin-bottom: 8px; }
+  .sem-pv-minor { display: flex; gap: 12px; font-size: 12px; margin-bottom: 12px; }
+  .sem-pv-input { border-radius: 8px; padding: 8px 10px; font-size: 13px; margin-bottom: 8px; }
+  .sem-pv-code { border-radius: 8px; padding: 8px 10px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; margin-bottom: 12px; }
+  .sem-pv-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .sem-pv-btn { border: none; border-radius: 8px; padding: 7px 12px; font-weight: 600; font-size: 12px; }
   .sem-pv-btn-ghost { background: transparent; }
   .sem-pv-chips { display: flex; gap: 6px; flex-wrap: wrap; }
   .sem-chip { border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 600; }
+  /* status banners on *-subtle backgrounds */
+  .sem-pv-banners { display: flex; flex-direction: column; gap: 6px; }
+  .sem-pv-banner { display: flex; align-items: center; gap: 8px; border-radius: 8px; padding: 8px 12px; font-size: 13px; }
+  .sem-pv-dot { flex: 0 0 auto; width: 8px; height: 8px; border-radius: 999px; }
+  /* raised surface + overlay scrim */
+  .sem-pv-extras { display: flex; gap: 8px; }
+  .sem-pv-raised { flex: 1 1 auto; border-radius: 8px; padding: 10px 12px; font-size: 12px; box-shadow: 0 6px 16px rgba(0,0,0,.12); }
+  .sem-pv-overlay { flex: 0 0 auto; display: flex; align-items: center; justify-content: center; width: 96px; border-radius: 8px; font-size: 11px; font-weight: 600; }
 
   .pv-block { border: 1px solid var(--border); border-radius: var(--radius-card); margin-bottom: 20px; padding: 24px; background: var(--surface); scroll-margin-top: 16px; }
   /* Fixed jump-nav header (not sticky-in-scroll; it's a flex sibling above the
