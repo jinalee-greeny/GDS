@@ -245,13 +245,11 @@
       onchange: function (e) {
         var nn = e.target.value.trim();
         if (!nn || nn === scaleName) { e.target.value = scaleName; return; }
-        updateColor(function (c) {
-          var un = uniqueKey(c.order.filter(function (x) { return x !== scaleName; }), nn);
-          c.order = c.order.map(function (x) { return x === scaleName ? un : x; });
-          c.scales[un] = c.scales[scaleName];
-          if (un !== scaleName) delete c.scales[scaleName];
-          scaleOpenState[un] = scaleOpenState[scaleName]; // carry open state across rename
-        });
+        var cur = store.get();
+        var un = uniqueKey(cur.color.order.filter(function (x) { return x !== scaleName; }), nn);
+        scaleOpenState[un] = scaleOpenState[scaleName]; // carry open state across rename
+        // Rename the scale AND repoint any semantic refs at it, in one undo step.
+        store.loadConfig(C.renameColorScale(cur, scaleName, un));
       }
     });
     var del = el('button', {

@@ -729,6 +729,28 @@
 
   function cloneConfig(cfg) { return JSON.parse(JSON.stringify(cfg)); }
 
+  // Rename a primitive color scale AND migrate every semantic color ref that
+  // points at it ({color.old} / {color.old.step} -> {color.new...}), so a rename
+  // doesn't silently break the semantic layer. Returns a new config.
+  function renameColorScale(cfg, oldName, newName) {
+    var next = cloneConfig(cfg);
+    if (oldName === newName || !next.color.scales[oldName]) return next;
+    next.color.order = next.color.order.map(function (x) { return x === oldName ? newName : x; });
+    next.color.scales[newName] = next.color.scales[oldName];
+    delete next.color.scales[oldName];
+    var flat = '{color.' + oldName + '}', pre = '{color.' + oldName + '.';
+    function mig(ref) {
+      if (typeof ref !== 'string') return ref;
+      if (ref === flat) return '{color.' + newName + '}';
+      return ref.indexOf(pre) === 0 ? '{color.' + newName + '.' + ref.slice(pre.length) : ref;
+    }
+    if (next.semantic && next.semantic.color) ['light', 'dark'].forEach(function (th) {
+      var set = next.semantic.color[th] || {};
+      Object.keys(set).forEach(function (r) { set[r] = mig(set[r]); });
+    });
+    return next;
+  }
+
   function buildRamp(hue, cpk, Lc, Cm) {
     var out = {};
     for (var i = 0; i < DEFAULT_CONFIG.steps.length; i++) {
@@ -1021,7 +1043,7 @@
 
   var TokenCore = { pyRound: pyRound, oklchToSrgb: oklchToSrgb, hexof: hexof,
     DEFAULT_CONFIG: DEFAULT_CONFIG, cloneConfig: cloneConfig,
-    buildRamp: buildRamp, buildAllRamps: buildAllRamps, colorEntries: colorEntries, toCSS: toCSS, toDTCG: toDTCG, toTailwind: toTailwind, toFigma: toFigma,
+    buildRamp: buildRamp, buildAllRamps: buildAllRamps, colorEntries: colorEntries, renameColorScale: renameColorScale, toCSS: toCSS, toDTCG: toDTCG, toTailwind: toTailwind, toFigma: toFigma,
     resolveRef: resolveRef, resolveSemantic: resolveSemantic,
     relLuminance: relLuminance, contrastRatio: contrastRatio, contrastReport: contrastReport, isAlphaRamp: isAlphaRamp,
     SEMANTIC_PAIRS: SEMANTIC_PAIRS, semanticContrastReport: semanticContrastReport, createStore: createStore };
@@ -1277,13 +1299,11 @@
       onchange: function (e) {
         var nn = e.target.value.trim();
         if (!nn || nn === scaleName) { e.target.value = scaleName; return; }
-        updateColor(function (c) {
-          var un = uniqueKey(c.order.filter(function (x) { return x !== scaleName; }), nn);
-          c.order = c.order.map(function (x) { return x === scaleName ? un : x; });
-          c.scales[un] = c.scales[scaleName];
-          if (un !== scaleName) delete c.scales[scaleName];
-          scaleOpenState[un] = scaleOpenState[scaleName]; // carry open state across rename
-        });
+        var cur = store.get();
+        var un = uniqueKey(cur.color.order.filter(function (x) { return x !== scaleName; }), nn);
+        scaleOpenState[un] = scaleOpenState[scaleName]; // carry open state across rename
+        // Rename the scale AND repoint any semantic refs at it, in one undo step.
+        store.loadConfig(C.renameColorScale(cur, scaleName, un));
       }
     });
     var del = el('button', {

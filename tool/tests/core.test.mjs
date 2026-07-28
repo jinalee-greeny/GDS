@@ -109,6 +109,30 @@ test('semanticContrastReport skips missing/alpha roles as null ratio', () => {
   assert.equal(byKey['text-link|surface'].ratio, null); // missing fg -> undefined
 });
 
+test('renameColorScale renames the scale and migrates semantic refs', () => {
+  const next = core.renameColorScale(core.DEFAULT_CONFIG, 'blue', 'brand');
+  // scale renamed
+  assert.ok(next.color.scales.brand && !next.color.scales.blue);
+  assert.ok(next.color.order.includes('brand') && !next.color.order.includes('blue'));
+  assert.equal(next.color.scales.brand['500'], '#1B8AFF');
+  // semantic refs repointed ({color.blue.600} -> {color.brand.600})
+  assert.equal(next.semantic.color.light.primary, '{color.brand.600}');
+  assert.equal(next.semantic.color.dark.info, '{color.brand.600}');
+  // refs to other scales untouched
+  assert.equal(next.semantic.color.light.text, '{color.gray.900}');
+  // original config not mutated
+  assert.ok(core.DEFAULT_CONFIG.color.scales.blue);
+  assert.equal(core.DEFAULT_CONFIG.semantic.color.light.primary, '{color.blue.600}');
+});
+
+test('renameColorScale handles a flat single-step scale ref', () => {
+  const cfg = core.cloneConfig(core.DEFAULT_CONFIG);
+  cfg.semantic.color.light.bg = '{color.white}';
+  const next = core.renameColorScale(cfg, 'white', 'paper');
+  assert.equal(next.semantic.color.light.bg, '{color.paper}');
+  assert.ok(next.color.scales.paper && !next.color.scales.white);
+});
+
 test('store setPath / undo / redo / dirty', () => {
   const s = core.createStore();
   assert.equal(s.isDirty(), false);
