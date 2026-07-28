@@ -1374,6 +1374,44 @@
     ]);
   }
 
+  // Accessibility for the semantic layer: contrast of the actual fg↔bg pairs the
+  // system prescribes (text-on-surface, fg-on-intent, …), checked per theme.
+  // Complements the primitive palette check under Scale › Accessibility.
+  function renderSemanticA11y(cfg) {
+    function badge(ok) { return el('span', { class: ok ? 'badge-pass' : 'badge-fail' }, [ok ? '✓' : '✕']); }
+    function themeTable(theme) {
+      var rep = C.semanticContrastReport(cfg, theme);
+      var head = el('tr', {}, ['샘플', 'Pair', '대비', 'Normal · AA 4.5', 'Large · AA 3']
+        .map(function (t) { return el('th', { text: t }); }));
+      var rows = rep.map(function (r) {
+        var na = r.ratio == null;
+        var sample = na
+          ? el('div', { class: 'sem-a11y-sample sem-a11y-sample-na', text: '—' })
+          : el('div', { class: 'sem-a11y-sample', style: 'background:' + r.bgHex + ';color:' + r.fgHex }, ['Aa']);
+        var ratioCell = el('td', { class: 'sem-a11y-ratio', text: na ? 'n/a' : (Math.round(r.ratio * 10) / 10).toFixed(1) + ':1' });
+        return el('tr', {}, [
+          el('td', {}, [sample]),
+          el('td', { class: 'sem-a11y-pair' }, [
+            el('span', { text: r.fg }), el('span', { class: 'sem-a11y-on', text: ' on ' }), el('span', { text: r.bg })
+          ]),
+          ratioCell,
+          el('td', {}, [na ? el('span', { class: 'sem-a11y-skip', text: '—' }) : badge(r.ratio >= 4.5)]),
+          el('td', {}, [na ? el('span', { class: 'sem-a11y-skip', text: '—' }) : badge(r.ratio >= 3)])
+        ]);
+      });
+      return el('div', { class: 'sem-a11y-theme' }, [
+        el('h4', { class: 'sem-a11y-th', text: theme === 'light' ? 'Light' : 'Dark' }),
+        el('table', { class: 'contrast-table' }, [el('thead', {}, [head]), el('tbody', {}, rows)])
+      ]);
+    }
+    return el('div', { class: 'pv-block a11y-block' }, [
+      el('h3', { text: 'Semantic contrast (WCAG)' }),
+      el('p', { class: 'pv-hint', text: '시스템이 정한 fg↔bg 조합의 대비를 라이트/다크 각각 검사합니다. 기준 — 본문(작은 텍스트): AA 4.5:1, 큰 텍스트(18px+/14px 볼드): AA 3:1. 반투명·깨진 참조 짝은 n/a.' }),
+      themeTable('light'),
+      themeTable('dark')
+    ]);
+  }
+
   var DOMAINS = [
     { key: 'color', label: 'Color', category: 'color', preview: ['pv-color'] },
     { key: 'typography', label: 'Typography', category: 'typography', preview: ['pv-type'] },
@@ -1389,7 +1427,8 @@
     { key: 'sem-text', label: 'Text', full: 'semantic', semKey: 'text' },
     { key: 'sem-radius', label: 'Radius', full: 'semantic', semKey: 'radius' },
     { key: 'sem-shadow', label: 'Shadow', full: 'semantic', semKey: 'shadow' },
-    { key: 'sem-space', label: 'Space', full: 'semantic', semKey: 'space' }
+    { key: 'sem-space', label: 'Space', full: 'semantic', semKey: 'space' },
+    { key: 'sem-a11y', label: 'Accessibility', full: 'semantic-a11y' }
   ];
   var EXPORT_DOMAIN = { key: 'export', label: 'Export', full: 'export' }; // shared across layers
   var LAYERS = [{ key: 'scale', label: 'Scale' }, { key: 'semantic', label: 'Semantic' }];
@@ -1480,6 +1519,7 @@
     if (domain.full) {
       var content = domain.full === 'export' ? extrasArr
         : domain.full === 'semantic' ? [renderSemanticView(cfg, domain.semKey)]
+        : domain.full === 'semantic-a11y' ? [renderSemanticA11y(cfg)]
         : [renderAccessibilityView(cfg)];
       var fullCol = el('div', { class: 'preview-col' },
         [el('div', { class: 'preview-body', id: 'preview-col' }, content)]);

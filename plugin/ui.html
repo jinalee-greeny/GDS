@@ -488,6 +488,15 @@
   .contrast-table th, .contrast-table td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--hairline); }
   .contrast-table th { font-weight: 600; color: var(--muted); }
   .contrast-hue-cell { text-transform: capitalize; font-weight: 600; }
+  /* semantic contrast check */
+  .sem-a11y-theme + .sem-a11y-theme { margin-top: 24px; }
+  .sem-a11y-th { margin: 0 0 8px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  .sem-a11y-sample { width: 46px; height: 30px; border-radius: 6px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; }
+  .sem-a11y-sample-na { background: var(--surface-sunken); color: var(--muted-2); }
+  .sem-a11y-pair { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+  .sem-a11y-on { color: var(--muted-2); }
+  .sem-a11y-ratio { font-weight: 600; }
+  .sem-a11y-skip { color: var(--muted-2); }
   .contrast-warn-row td { padding: 6px; }
   .contrast-warn { display: flex; align-items: flex-start; gap: 6px; padding: 6px 8px; border-radius: 4px;
     background: #fee2e2; color: #7f1d1d; font-size: 14px; }
@@ -917,6 +926,29 @@
     });
   }
 
+  // The foreground↔background role pairs the semantic layer actually prescribes.
+  // Contrast is meaningful only for these real combinations (not primitive steps).
+  var SEMANTIC_PAIRS = [
+    { fg: 'text', bg: 'bg' }, { fg: 'text', bg: 'surface' }, { fg: 'text-muted', bg: 'surface' },
+    { fg: 'text-subtle', bg: 'surface' }, { fg: 'text-link', bg: 'surface' }, { fg: 'text-muted', bg: 'bg' },
+    { fg: 'primary-fg', bg: 'primary' }, { fg: 'danger-fg', bg: 'danger' },
+    { fg: 'success-fg', bg: 'success' }, { fg: 'info-fg', bg: 'info' },
+    { fg: 'text', bg: 'primary-subtle' }, { fg: 'text', bg: 'danger-subtle' },
+    { fg: 'text', bg: 'success-subtle' }, { fg: 'text', bg: 'info-subtle' }
+  ];
+  // Contrast of each semantic pair for one theme ('light'|'dark'). ratio is null
+  // when either role is missing (deleted/renamed) or resolves to a translucent
+  // #RRGGBBAA (contrast undefined without a backdrop) — the row is then skipped.
+  function semanticContrastReport(cfg, theme) {
+    var res = resolveSemantic(cfg).color[theme] || {};
+    return SEMANTIC_PAIRS.map(function (p) {
+      var fg = res[p.fg], bg = res[p.bg];
+      var undef = !fg || !bg ||
+        (typeof fg === 'string' && fg.length === 9) || (typeof bg === 'string' && bg.length === 9);
+      return { fg: p.fg, bg: p.bg, fgHex: fg || null, bgHex: bg || null, ratio: undef ? null : contrastRatio(fg, bg) };
+    });
+  }
+
   function deepEqual(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
 
   function createStore(initial) {
@@ -954,7 +986,8 @@
     DEFAULT_CONFIG: DEFAULT_CONFIG, cloneConfig: cloneConfig,
     buildRamp: buildRamp, buildAllRamps: buildAllRamps, colorEntries: colorEntries, toCSS: toCSS, toDTCG: toDTCG, toTailwind: toTailwind, toFigma: toFigma,
     resolveRef: resolveRef, resolveSemantic: resolveSemantic,
-    relLuminance: relLuminance, contrastRatio: contrastRatio, contrastReport: contrastReport, isAlphaRamp: isAlphaRamp, createStore: createStore };
+    relLuminance: relLuminance, contrastRatio: contrastRatio, contrastReport: contrastReport, isAlphaRamp: isAlphaRamp,
+    SEMANTIC_PAIRS: SEMANTIC_PAIRS, semanticContrastReport: semanticContrastReport, createStore: createStore };
   root.TokenCore = TokenCore;
   if (typeof module !== 'undefined' && module.exports) module.exports = TokenCore;
 })(typeof window !== 'undefined' ? window : globalThis);
@@ -2336,6 +2369,44 @@
     ]);
   }
 
+  // Accessibility for the semantic layer: contrast of the actual fg↔bg pairs the
+  // system prescribes (text-on-surface, fg-on-intent, …), checked per theme.
+  // Complements the primitive palette check under Scale › Accessibility.
+  function renderSemanticA11y(cfg) {
+    function badge(ok) { return el('span', { class: ok ? 'badge-pass' : 'badge-fail' }, [ok ? '✓' : '✕']); }
+    function themeTable(theme) {
+      var rep = C.semanticContrastReport(cfg, theme);
+      var head = el('tr', {}, ['샘플', 'Pair', '대비', 'Normal · AA 4.5', 'Large · AA 3']
+        .map(function (t) { return el('th', { text: t }); }));
+      var rows = rep.map(function (r) {
+        var na = r.ratio == null;
+        var sample = na
+          ? el('div', { class: 'sem-a11y-sample sem-a11y-sample-na', text: '—' })
+          : el('div', { class: 'sem-a11y-sample', style: 'background:' + r.bgHex + ';color:' + r.fgHex }, ['Aa']);
+        var ratioCell = el('td', { class: 'sem-a11y-ratio', text: na ? 'n/a' : (Math.round(r.ratio * 10) / 10).toFixed(1) + ':1' });
+        return el('tr', {}, [
+          el('td', {}, [sample]),
+          el('td', { class: 'sem-a11y-pair' }, [
+            el('span', { text: r.fg }), el('span', { class: 'sem-a11y-on', text: ' on ' }), el('span', { text: r.bg })
+          ]),
+          ratioCell,
+          el('td', {}, [na ? el('span', { class: 'sem-a11y-skip', text: '—' }) : badge(r.ratio >= 4.5)]),
+          el('td', {}, [na ? el('span', { class: 'sem-a11y-skip', text: '—' }) : badge(r.ratio >= 3)])
+        ]);
+      });
+      return el('div', { class: 'sem-a11y-theme' }, [
+        el('h4', { class: 'sem-a11y-th', text: theme === 'light' ? 'Light' : 'Dark' }),
+        el('table', { class: 'contrast-table' }, [el('thead', {}, [head]), el('tbody', {}, rows)])
+      ]);
+    }
+    return el('div', { class: 'pv-block a11y-block' }, [
+      el('h3', { text: 'Semantic contrast (WCAG)' }),
+      el('p', { class: 'pv-hint', text: '시스템이 정한 fg↔bg 조합의 대비를 라이트/다크 각각 검사합니다. 기준 — 본문(작은 텍스트): AA 4.5:1, 큰 텍스트(18px+/14px 볼드): AA 3:1. 반투명·깨진 참조 짝은 n/a.' }),
+      themeTable('light'),
+      themeTable('dark')
+    ]);
+  }
+
   var DOMAINS = [
     { key: 'color', label: 'Color', category: 'color', preview: ['pv-color'] },
     { key: 'typography', label: 'Typography', category: 'typography', preview: ['pv-type'] },
@@ -2351,7 +2422,8 @@
     { key: 'sem-text', label: 'Text', full: 'semantic', semKey: 'text' },
     { key: 'sem-radius', label: 'Radius', full: 'semantic', semKey: 'radius' },
     { key: 'sem-shadow', label: 'Shadow', full: 'semantic', semKey: 'shadow' },
-    { key: 'sem-space', label: 'Space', full: 'semantic', semKey: 'space' }
+    { key: 'sem-space', label: 'Space', full: 'semantic', semKey: 'space' },
+    { key: 'sem-a11y', label: 'Accessibility', full: 'semantic-a11y' }
   ];
   var EXPORT_DOMAIN = { key: 'export', label: 'Export', full: 'export' }; // shared across layers
   var LAYERS = [{ key: 'scale', label: 'Scale' }, { key: 'semantic', label: 'Semantic' }];
@@ -2442,6 +2514,7 @@
     if (domain.full) {
       var content = domain.full === 'export' ? extrasArr
         : domain.full === 'semantic' ? [renderSemanticView(cfg, domain.semKey)]
+        : domain.full === 'semantic-a11y' ? [renderSemanticA11y(cfg)]
         : [renderAccessibilityView(cfg)];
       var fullCol = el('div', { class: 'preview-col' },
         [el('div', { class: 'preview-body', id: 'preview-col' }, content)]);

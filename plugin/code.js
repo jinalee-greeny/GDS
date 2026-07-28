@@ -357,6 +357,29 @@
     });
   }
 
+  // The foreground↔background role pairs the semantic layer actually prescribes.
+  // Contrast is meaningful only for these real combinations (not primitive steps).
+  var SEMANTIC_PAIRS = [
+    { fg: 'text', bg: 'bg' }, { fg: 'text', bg: 'surface' }, { fg: 'text-muted', bg: 'surface' },
+    { fg: 'text-subtle', bg: 'surface' }, { fg: 'text-link', bg: 'surface' }, { fg: 'text-muted', bg: 'bg' },
+    { fg: 'primary-fg', bg: 'primary' }, { fg: 'danger-fg', bg: 'danger' },
+    { fg: 'success-fg', bg: 'success' }, { fg: 'info-fg', bg: 'info' },
+    { fg: 'text', bg: 'primary-subtle' }, { fg: 'text', bg: 'danger-subtle' },
+    { fg: 'text', bg: 'success-subtle' }, { fg: 'text', bg: 'info-subtle' }
+  ];
+  // Contrast of each semantic pair for one theme ('light'|'dark'). ratio is null
+  // when either role is missing (deleted/renamed) or resolves to a translucent
+  // #RRGGBBAA (contrast undefined without a backdrop) — the row is then skipped.
+  function semanticContrastReport(cfg, theme) {
+    var res = resolveSemantic(cfg).color[theme] || {};
+    return SEMANTIC_PAIRS.map(function (p) {
+      var fg = res[p.fg], bg = res[p.bg];
+      var undef = !fg || !bg ||
+        (typeof fg === 'string' && fg.length === 9) || (typeof bg === 'string' && bg.length === 9);
+      return { fg: p.fg, bg: p.bg, fgHex: fg || null, bgHex: bg || null, ratio: undef ? null : contrastRatio(fg, bg) };
+    });
+  }
+
   function deepEqual(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
 
   function createStore(initial) {
@@ -394,7 +417,8 @@
     DEFAULT_CONFIG: DEFAULT_CONFIG, cloneConfig: cloneConfig,
     buildRamp: buildRamp, buildAllRamps: buildAllRamps, colorEntries: colorEntries, toCSS: toCSS, toDTCG: toDTCG, toTailwind: toTailwind, toFigma: toFigma,
     resolveRef: resolveRef, resolveSemantic: resolveSemantic,
-    relLuminance: relLuminance, contrastRatio: contrastRatio, contrastReport: contrastReport, isAlphaRamp: isAlphaRamp, createStore: createStore };
+    relLuminance: relLuminance, contrastRatio: contrastRatio, contrastReport: contrastReport, isAlphaRamp: isAlphaRamp,
+    SEMANTIC_PAIRS: SEMANTIC_PAIRS, semanticContrastReport: semanticContrastReport, createStore: createStore };
   root.TokenCore = TokenCore;
   if (typeof module !== 'undefined' && module.exports) module.exports = TokenCore;
 })(typeof window !== 'undefined' ? window : globalThis);

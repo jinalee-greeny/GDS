@@ -87,6 +87,27 @@ test('resolveSemantic surfaces a broken ref as null (deleted scale)', () => {
   assert.equal(core.resolveSemantic(cfg).color.light.primary, null);
 });
 
+test('semanticContrastReport computes real fg/bg pair ratios per theme', () => {
+  const rep = core.semanticContrastReport(core.DEFAULT_CONFIG, 'light');
+  const byKey = Object.fromEntries(rep.map(r => [r.fg + '|' + r.bg, r]));
+  // text (gray900) on bg (white) is very high contrast; well past AAA.
+  assert.ok(byKey['text|bg'].ratio > 7);
+  // primary-fg (white) on primary (blue600) passes AA body (>= 4.5).
+  assert.ok(byKey['primary-fg|primary'].ratio >= 4.5);
+  // ratios are finite positive numbers, never null for the default set.
+  assert.ok(rep.every(r => typeof r.ratio === 'number' && r.ratio > 1));
+});
+
+test('semanticContrastReport skips missing/alpha roles as null ratio', () => {
+  const cfg = core.cloneConfig(core.DEFAULT_CONFIG);
+  cfg.semantic.color.light.surface = '{color.black-alpha.40}'; // translucent bg
+  delete cfg.semantic.color.light['text-link'];                 // deleted role
+  const rep = core.semanticContrastReport(cfg, 'light');
+  const byKey = Object.fromEntries(rep.map(r => [r.fg + '|' + r.bg, r]));
+  assert.equal(byKey['text|surface'].ratio, null);      // alpha bg -> undefined
+  assert.equal(byKey['text-link|surface'].ratio, null); // missing fg -> undefined
+});
+
 test('store setPath / undo / redo / dirty', () => {
   const s = core.createStore();
   assert.equal(s.isDirty(), false);
