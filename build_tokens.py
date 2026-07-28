@@ -182,12 +182,21 @@ css.append("}")
 open(f"{OUT}/build/tokens.css","w").write("\n".join(css)+"\n")
 
 # ---------- Tailwind preset ----------
+def sem_tw_vars(s,prefix):
+    o={}
+    for r,ref in (s or {}).items():
+        if ref_to_css_var(ref): o[r]="var(--"+((prefix+"-") if prefix else "")+r+")"
+    return o
+def _merge(base,extra):
+    o=dict(base); o.update(extra); return o
+tw_colors={name:(list(color_scales[name].values())[0] if len(color_scales[name])==1 else color_scales[name]) for name in color_order}
+tw_colors=_merge(tw_colors, sem_tw_vars(semantic["color"]["light"], ""))
 tw={
  "theme":{"extend":{
-   "colors":{name:(list(color_scales[name].values())[0] if len(color_scales[name])==1 else color_scales[name]) for name in color_order},
+   "colors":tw_colors,
    "fontFamily":{k:v for k,v in font_family.items()},
    "fontSize":font_size,"fontWeight":font_weight,"lineHeight":line_height,"letterSpacing":letter_spacing,
-   "spacing":space,"borderRadius":radius,"borderWidth":border_width,"opacity":opacity,"boxShadow":shadow,
+   "spacing":_merge(space, sem_tw_vars(semantic["space"],"space")),"borderRadius":_merge(radius, sem_tw_vars(semantic["radius"],"radius")),"borderWidth":border_width,"opacity":opacity,"boxShadow":_merge(shadow, sem_tw_vars(semantic["shadow"],"shadow")),
    "zIndex":zindex,"screens":breakpoint,"transitionDuration":{k:v for k,v in duration.items()},
    "transitionTimingFunction":easing,
  }}

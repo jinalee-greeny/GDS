@@ -931,6 +931,14 @@
     return JSON.stringify(dtcg, null, 2);
   }
 
+  // Semantic tokens join Tailwind as CSS-var refs (so `bg-primary`, `rounded-card`,
+  // `shadow-modal`, `p-inset-md` respect [data-theme="dark"]). prefix '' for colors.
+  function semTwVars(set, prefix) {
+    var o = {};
+    Object.keys(set || {}).forEach(function (r) { if (refToCssVar(set[r])) o[r] = 'var(--' + (prefix ? prefix + '-' : '') + r + ')'; });
+    return o;
+  }
+  function assignVars(base, extra) { var o = {}; Object.keys(base).forEach(function (k) { o[k] = base[k]; }); Object.keys(extra).forEach(function (k) { o[k] = extra[k]; }); return o; }
   function toTailwind(cfg) {
     var ramps = buildAllRamps(cfg);
     var colors = {};
@@ -938,6 +946,8 @@
       var e = colorEntries(ramps[name]);
       colors[name] = e.single ? ramps[name][e.keys[0]] : ramps[name];
     });
+    var sem = cfg.semantic || {};
+    colors = assignVars(colors, semTwVars((sem.color && sem.color.light) || {}, ''));
     var tw = { theme: { extend: {
       colors: colors,
       fontFamily: cfg.fontFamily,
@@ -945,11 +955,11 @@
       fontWeight: cfg.fontWeight,
       lineHeight: cfg.lineHeight,
       letterSpacing: cfg.letterSpacing,
-      spacing: cfg.space,
-      borderRadius: cfg.radius,
+      spacing: assignVars(cfg.space, semTwVars(sem.space, 'space')),
+      borderRadius: assignVars(cfg.radius, semTwVars(sem.radius, 'radius')),
       borderWidth: cfg.borderWidth,
       opacity: cfg.opacity,
-      boxShadow: cfg.shadow,
+      boxShadow: assignVars(cfg.shadow, semTwVars(sem.shadow, 'shadow')),
       zIndex: cfg.zIndex,
       screens: cfg.breakpoint,
       transitionDuration: cfg.duration,
