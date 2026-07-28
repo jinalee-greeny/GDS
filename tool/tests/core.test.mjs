@@ -133,6 +133,15 @@ test('renameColorScale handles a flat single-step scale ref', () => {
   assert.ok(next.color.scales.paper && !next.color.scales.white);
 });
 
+test('refToCssVar maps refs to primitive CSS vars', () => {
+  assert.equal(core.refToCssVar('{color.blue.600}'), 'var(--color-blue-600)');
+  assert.equal(core.refToCssVar('{color.white}'), 'var(--color-white)');
+  assert.equal(core.refToCssVar('{fontSize.md}'), 'var(--font-size-md)');
+  assert.equal(core.refToCssVar('{radius.lg}'), 'var(--radius-lg)');
+  assert.equal(core.refToCssVar('#fff'), null);        // not a ref
+  assert.equal(core.refToCssVar('{bogus.x}'), null);   // unknown group
+});
+
 test('store setPath / undo / redo / dirty', () => {
   const s = core.createStore();
   assert.equal(s.isDirty(), false);

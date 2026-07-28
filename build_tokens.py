@@ -98,6 +98,18 @@ dtcg={
 }
 with open(f"{OUT}/tokens/tokens.json","w") as f: json.dump(dtcg,f,indent=2,ensure_ascii=False)
 
+# ---------- semantic layer (mirrors core/token-core.js DEFAULT_CONFIG.semantic) ----------
+semantic = json.loads(r'''{"color":{"light":{"bg":"{color.white}","surface":"{color.gray.50}","surface-sunken":"{color.gray.100}","surface-raised":"{color.white}","surface-hover":"{color.gray.100}","surface-disabled":"{color.gray.100}","overlay":"{color.black-alpha.60}","text":"{color.gray.900}","text-muted":"{color.gray.700}","text-subtle":"{color.gray.500}","text-inverse":"{color.white}","text-link":"{color.blue.700}","text-disabled":"{color.gray.400}","border":"{color.gray.200}","border-strong":"{color.gray.300}","border-subtle":"{color.gray.100}","border-focus":"{color.blue.500}","border-disabled":"{color.gray.200}","primary":"{color.blue.600}","primary-hover":"{color.blue.700}","primary-active":"{color.blue.800}","primary-fg":"{color.white}","primary-subtle":"{color.blue.50}","focus-ring":"{color.blue.500}","accent":"{color.blue.500}","danger":"{color.red.600}","danger-fg":"{color.white}","danger-subtle":"{color.red.50}","danger-on-subtle":"{color.red.700}","warning":"{color.amber.400}","warning-fg":"{color.gray.900}","warning-subtle":"{color.amber.50}","warning-on-subtle":"{color.amber.900}","success":"{color.green.700}","success-fg":"{color.white}","success-subtle":"{color.green.50}","success-on-subtle":"{color.green.700}","info":"{color.blue.600}","info-fg":"{color.white}","info-subtle":"{color.blue.50}","info-on-subtle":"{color.blue.700}"},"dark":{"bg":"{color.gray.900}","surface":"{color.gray.800}","surface-sunken":"{color.gray.900}","surface-raised":"{color.gray.800}","surface-hover":"{color.gray.700}","surface-disabled":"{color.gray.800}","overlay":"{color.black-alpha.60}","text":"{color.gray.50}","text-muted":"{color.gray.300}","text-subtle":"{color.gray.500}","text-inverse":"{color.gray.900}","text-link":"{color.blue.300}","text-disabled":"{color.gray.600}","border":"{color.gray.700}","border-strong":"{color.gray.600}","border-subtle":"{color.gray.800}","border-focus":"{color.blue.400}","border-disabled":"{color.gray.700}","primary":"{color.blue.600}","primary-hover":"{color.blue.700}","primary-active":"{color.blue.800}","primary-fg":"{color.white}","primary-subtle":"{color.blue.900}","focus-ring":"{color.blue.400}","accent":"{color.blue.400}","danger":"{color.red.600}","danger-fg":"{color.white}","danger-subtle":"{color.red.900}","danger-on-subtle":"{color.red.100}","warning":"{color.amber.400}","warning-fg":"{color.gray.900}","warning-subtle":"{color.amber.900}","warning-on-subtle":"{color.amber.100}","success":"{color.green.700}","success-fg":"{color.white}","success-subtle":"{color.green.900}","success-on-subtle":"{color.green.100}","info":"{color.blue.600}","info-fg":"{color.white}","info-subtle":"{color.blue.900}","info-on-subtle":"{color.blue.100}"}},"text":{"display":{"size":"{fontSize.6xl}","weight":"{fontWeight.bold}","lineHeight":"{lineHeight.none}","letterSpacing":"{letterSpacing.tighter}","family":"{fontFamily.sans}"},"h1":{"size":"{fontSize.4xl}","weight":"{fontWeight.bold}","lineHeight":"{lineHeight.tight}","letterSpacing":"{letterSpacing.tight}","family":"{fontFamily.sans}"},"h2":{"size":"{fontSize.3xl}","weight":"{fontWeight.bold}","lineHeight":"{lineHeight.snug}","letterSpacing":"{letterSpacing.normal}","family":"{fontFamily.sans}"},"h3":{"size":"{fontSize.2xl}","weight":"{fontWeight.semibold}","lineHeight":"{lineHeight.snug}","letterSpacing":"{letterSpacing.normal}","family":"{fontFamily.sans}"},"title":{"size":"{fontSize.xl}","weight":"{fontWeight.semibold}","lineHeight":"{lineHeight.snug}","letterSpacing":"{letterSpacing.normal}","family":"{fontFamily.sans}"},"body-lg":{"size":"{fontSize.lg}","weight":"{fontWeight.regular}","lineHeight":"{lineHeight.relaxed}","letterSpacing":"{letterSpacing.normal}","family":"{fontFamily.sans}"},"body":{"size":"{fontSize.md}","weight":"{fontWeight.regular}","lineHeight":"{lineHeight.normal}","letterSpacing":"{letterSpacing.normal}","family":"{fontFamily.sans}"},"body-sm":{"size":"{fontSize.sm}","weight":"{fontWeight.regular}","lineHeight":"{lineHeight.normal}","letterSpacing":"{letterSpacing.normal}","family":"{fontFamily.sans}"},"label":{"size":"{fontSize.sm}","weight":"{fontWeight.medium}","lineHeight":"{lineHeight.normal}","letterSpacing":"{letterSpacing.normal}","family":"{fontFamily.sans}"},"caption":{"size":"{fontSize.xs}","weight":"{fontWeight.regular}","lineHeight":"{lineHeight.normal}","letterSpacing":"{letterSpacing.normal}","family":"{fontFamily.sans}"},"overline":{"size":"{fontSize.xs}","weight":"{fontWeight.semibold}","lineHeight":"{lineHeight.normal}","letterSpacing":"{letterSpacing.wider}","family":"{fontFamily.sans}"},"code":{"size":"{fontSize.sm}","weight":"{fontWeight.regular}","lineHeight":"{lineHeight.normal}","letterSpacing":"{letterSpacing.normal}","family":"{fontFamily.mono}"}},"radius":{"sharp":"{radius.none}","field":"{radius.sm}","control":"{radius.md}","card":"{radius.lg}","modal":"{radius.xl}","pill":"{radius.full}"},"shadow":{"subtle":"{shadow.sm}","card":"{shadow.md}","popover":"{shadow.lg}","modal":"{shadow.xl}","overlay":"{shadow.2xl}"},"space":{"inset-xs":"{space.1}","inset-sm":"{space.2}","inset-md":"{space.4}","inset-lg":"{space.6}","inset-xl":"{space.8}","gap-xs":"{space.1}","gap-sm":"{space.2}","gap-md":"{space.4}","gap-lg":"{space.8}","gap-xl":"{space.12}","section":"{space.20}"}}''')
+CSS_PREFIX={"color":"color","fontFamily":"font","fontSize":"font-size","fontWeight":"font-weight","lineHeight":"leading","letterSpacing":"tracking","space":"space","radius":"radius","borderWidth":"border","opacity":"opacity","shadow":"shadow","zIndex":"z","breakpoint":"bp","duration":"duration","easing":"ease"}
+TEXT_AXIS_CSS={"size":"size","weight":"weight","lineHeight":"line-height","letterSpacing":"letter-spacing","family":"family"}
+def ref_to_css_var(ref):
+    if not isinstance(ref,str): return None
+    r=ref.strip()
+    if not (r.startswith("{") and r.endswith("}")): return None
+    parts=r[1:-1].split("."); pre=CSS_PREFIX.get(parts[0])
+    if not pre: return None
+    return "var(--"+pre+(("-"+"-".join(parts[1:])) if len(parts)>1 else "")+")"
+
 # ---------- CSS variables ----------
 css=[":root {"]
 for name in color_order:
@@ -120,6 +132,29 @@ for k,v in zindex.items(): css.append(f"  --z-{k}: {v};")
 for k,v in breakpoint.items(): css.append(f"  --bp-{k}: {v};")
 for k,v in duration.items(): css.append(f"  --duration-{k}: {v};")
 for k,v in easing.items(): css.append(f"  --ease-{k}: {v};")
+# semantic tokens as var() chains onto primitives (theme-invariant + light colors)
+css.append("")
+css.append("  /* semantic — colors (light) */")
+for r,ref in semantic["color"]["light"].items():
+    v=ref_to_css_var(ref)
+    if v: css.append(f"  --{r}: {v};")
+css.append("  /* semantic — typography */")
+for role,axes in semantic["text"].items():
+    for axis,ref in axes.items():
+        v=ref_to_css_var(ref)
+        if v: css.append(f"  --type-{role}-{TEXT_AXIS_CSS.get(axis,axis)}: {v};")
+for grp in ["radius","shadow","space"]:
+    css.append(f"  /* semantic — {grp} */")
+    for r,ref in semantic[grp].items():
+        v=ref_to_css_var(ref)
+        if v: css.append(f"  --{grp}-{r}: {v};")
+css.append("}")
+# dark theme: override the semantic color vars only
+css.append("")
+css.append(':root[data-theme="dark"] {')
+for r,ref in semantic["color"]["dark"].items():
+    v=ref_to_css_var(ref)
+    if v: css.append(f"  --{r}: {v};")
 css.append("}")
 open(f"{OUT}/build/tokens.css","w").write("\n".join(css)+"\n")
 

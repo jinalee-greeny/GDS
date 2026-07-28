@@ -224,10 +224,44 @@
     return out;
   }
 
+  // group name -> CSS custom-property prefix (matches the primitive vars toCSS emits).
+  var CSS_PREFIX = { color: 'color', fontFamily: 'font', fontSize: 'font-size', fontWeight: 'font-weight',
+    lineHeight: 'leading', letterSpacing: 'tracking', space: 'space', radius: 'radius', borderWidth: 'border',
+    opacity: 'opacity', shadow: 'shadow', zIndex: 'z', breakpoint: 'bp', duration: 'duration', easing: 'ease' };
+  // A semantic ref "{group.path}" -> the CSS var() of the primitive it points at,
+  // e.g. {color.blue.600} -> var(--color-blue-600). null if not a resolvable ref.
+  function refToCssVar(ref) {
+    if (typeof ref !== 'string') return null;
+    var m = /^\{(.+)\}$/.exec(ref.trim());
+    if (!m) return null;
+    var parts = m[1].split('.'), pre = CSS_PREFIX[parts[0]];
+    if (!pre) return null;
+    return 'var(--' + pre + (parts.length > 1 ? '-' + parts.slice(1).join('-') : '') + ')';
+  }
+  var TEXT_AXIS_CSS = { size: 'size', weight: 'weight', lineHeight: 'line-height', letterSpacing: 'letter-spacing', family: 'family' };
+
   function toCSS(cfg) {
     var ramps = buildAllRamps(cfg);
     var L = [':root {'];
     var push = function (name, val) { L.push('  --' + name + ': ' + val + ';'); };
+    // Semantic tokens as var() chains onto the primitives (theme-invariant + light colors).
+    function pushSemColor(set) { Object.keys(set).forEach(function (r) { var v = refToCssVar(set[r]); if (v) push(r, v); }); }
+    function emitSemantic() {
+      var sem = cfg.semantic; if (!sem) return;
+      L.push('');
+      L.push('  /* semantic — colors (light) */');
+      pushSemColor((sem.color && sem.color.light) || {});
+      L.push('  /* semantic — typography */');
+      Object.keys(sem.text || {}).forEach(function (role) {
+        var t = sem.text[role];
+        Object.keys(t).forEach(function (axis) { var v = refToCssVar(t[axis]); if (v) push('type-' + role + '-' + (TEXT_AXIS_CSS[axis] || axis), v); });
+      });
+      ['radius', 'shadow', 'space'].forEach(function (grp) {
+        L.push('  /* semantic — ' + grp + ' */');
+        var set = sem[grp] || {};
+        Object.keys(set).forEach(function (r) { var v = refToCssVar(set[r]); if (v) push(grp + '-' + r, v); });
+      });
+    }
     cfg.color.order.forEach(function (name) {
       var e = colorEntries(ramps[name]);
       if (e.single) push('color-' + name, ramps[name][e.keys[0]]);
@@ -248,7 +282,15 @@
     each(cfg.breakpoint, 'bp-');
     each(cfg.duration, 'duration-');
     each(cfg.easing, 'ease-');
+    emitSemantic();
     L.push('}');
+    // Dark theme: override only the semantic color vars.
+    if (cfg.semantic && cfg.semantic.color && cfg.semantic.color.dark) {
+      L.push('');
+      L.push(':root[data-theme="dark"] {');
+      pushSemColor(cfg.semantic.color.dark);
+      L.push('}');
+    }
     return L.join('\n') + '\n';
   }
 
@@ -448,7 +490,7 @@
   var TokenCore = { pyRound: pyRound, oklchToSrgb: oklchToSrgb, hexof: hexof,
     DEFAULT_CONFIG: DEFAULT_CONFIG, cloneConfig: cloneConfig,
     buildRamp: buildRamp, buildAllRamps: buildAllRamps, colorEntries: colorEntries, renameColorScale: renameColorScale, toCSS: toCSS, toDTCG: toDTCG, toTailwind: toTailwind, toFigma: toFigma,
-    resolveRef: resolveRef, resolveSemantic: resolveSemantic,
+    resolveRef: resolveRef, resolveSemantic: resolveSemantic, refToCssVar: refToCssVar,
     relLuminance: relLuminance, contrastRatio: contrastRatio, contrastReport: contrastReport, isAlphaRamp: isAlphaRamp,
     SEMANTIC_PAIRS: SEMANTIC_PAIRS, semanticContrastReport: semanticContrastReport, createStore: createStore };
   root.TokenCore = TokenCore;
