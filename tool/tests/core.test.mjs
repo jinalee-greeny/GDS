@@ -73,7 +73,7 @@ test('resolveRef resolves primitive references and reports broken ones', () => {
 test('resolveSemantic resolves the whole tree with light/dark colors', () => {
   const s = core.resolveSemantic(core.DEFAULT_CONFIG);
   assert.equal(s.color.light.primary, '#0A72DA'); // {color.blue.600}
-  assert.equal(s.color.dark.primary, '#1B8AFF');  // {color.blue.500}
+  assert.equal(s.color.dark.primary, '#0A72DA');  // {color.blue.600} (AA-tuned)
   assert.equal(s.color.light.bg, '#FFFFFF');
   assert.equal(JSON.stringify(s.text.body),
     JSON.stringify({ size: '16px', weight: '400', lineHeight: '1.5', letterSpacing: '0em' }));

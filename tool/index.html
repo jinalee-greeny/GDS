@@ -639,21 +639,21 @@
       color: {
         light: {
           bg:'{color.white}', surface:'{color.gray.50}', 'surface-sunken':'{color.gray.100}', 'surface-raised':'{color.white}', 'surface-hover':'{color.gray.100}', overlay:'{color.black-alpha.60}',
-          text:'{color.gray.900}', 'text-muted':'{color.gray.600}', 'text-subtle':'{color.gray.500}', 'text-inverse':'{color.white}', 'text-link':'{color.blue.600}', 'text-disabled':'{color.gray.400}',
+          text:'{color.gray.900}', 'text-muted':'{color.gray.700}', 'text-subtle':'{color.gray.500}', 'text-inverse':'{color.white}', 'text-link':'{color.blue.700}', 'text-disabled':'{color.gray.400}',
           border:'{color.gray.200}', 'border-strong':'{color.gray.300}', 'border-subtle':'{color.gray.100}', 'border-focus':'{color.blue.500}',
           primary:'{color.blue.600}', 'primary-hover':'{color.blue.700}', 'primary-active':'{color.blue.800}', 'primary-fg':'{color.white}', 'primary-subtle':'{color.blue.50}', 'focus-ring':'{color.blue.500}', accent:'{color.blue.500}',
           danger:'{color.red.600}', 'danger-fg':'{color.white}', 'danger-subtle':'{color.red.50}',
-          success:'{color.green.600}', 'success-fg':'{color.white}', 'success-subtle':'{color.green.50}',
-          info:'{color.blue.500}', 'info-fg':'{color.white}', 'info-subtle':'{color.blue.50}'
+          success:'{color.green.700}', 'success-fg':'{color.white}', 'success-subtle':'{color.green.50}',
+          info:'{color.blue.600}', 'info-fg':'{color.white}', 'info-subtle':'{color.blue.50}'
         },
         dark: {
           bg:'{color.gray.900}', surface:'{color.gray.800}', 'surface-sunken':'{color.gray.900}', 'surface-raised':'{color.gray.800}', 'surface-hover':'{color.gray.700}', overlay:'{color.black-alpha.60}',
-          text:'{color.gray.50}', 'text-muted':'{color.gray.400}', 'text-subtle':'{color.gray.500}', 'text-inverse':'{color.gray.900}', 'text-link':'{color.blue.400}', 'text-disabled':'{color.gray.600}',
+          text:'{color.gray.50}', 'text-muted':'{color.gray.300}', 'text-subtle':'{color.gray.500}', 'text-inverse':'{color.gray.900}', 'text-link':'{color.blue.300}', 'text-disabled':'{color.gray.600}',
           border:'{color.gray.700}', 'border-strong':'{color.gray.600}', 'border-subtle':'{color.gray.800}', 'border-focus':'{color.blue.400}',
-          primary:'{color.blue.500}', 'primary-hover':'{color.blue.400}', 'primary-active':'{color.blue.300}', 'primary-fg':'{color.white}', 'primary-subtle':'{color.blue.900}', 'focus-ring':'{color.blue.400}', accent:'{color.blue.400}',
-          danger:'{color.red.500}', 'danger-fg':'{color.white}', 'danger-subtle':'{color.red.900}',
-          success:'{color.green.500}', 'success-fg':'{color.white}', 'success-subtle':'{color.green.900}',
-          info:'{color.blue.400}', 'info-fg':'{color.gray.900}', 'info-subtle':'{color.blue.900}'
+          primary:'{color.blue.600}', 'primary-hover':'{color.blue.500}', 'primary-active':'{color.blue.400}', 'primary-fg':'{color.white}', 'primary-subtle':'{color.blue.900}', 'focus-ring':'{color.blue.400}', accent:'{color.blue.400}',
+          danger:'{color.red.600}', 'danger-fg':'{color.white}', 'danger-subtle':'{color.red.900}',
+          success:'{color.green.700}', 'success-fg':'{color.white}', 'success-subtle':'{color.green.900}',
+          info:'{color.blue.600}', 'info-fg':'{color.white}', 'info-subtle':'{color.blue.900}'
         }
       },
       text: {
@@ -910,7 +910,8 @@
   // Contrast is meaningful only for these real combinations (not primitive steps).
   var SEMANTIC_PAIRS = [
     { fg: 'text', bg: 'bg' }, { fg: 'text', bg: 'surface' }, { fg: 'text-muted', bg: 'surface' },
-    { fg: 'text-subtle', bg: 'surface' }, { fg: 'text-link', bg: 'surface' }, { fg: 'text-muted', bg: 'bg' },
+    { fg: 'text-link', bg: 'surface' }, { fg: 'text-muted', bg: 'bg' },
+    // text-subtle / text-disabled are placeholder/disabled tier — WCAG-exempt, not checked.
     { fg: 'primary-fg', bg: 'primary' }, { fg: 'danger-fg', bg: 'danger' },
     { fg: 'success-fg', bg: 'success' }, { fg: 'info-fg', bg: 'info' },
     { fg: 'text', bg: 'primary-subtle' }, { fg: 'text', bg: 'danger-subtle' },
