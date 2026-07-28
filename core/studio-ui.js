@@ -1114,14 +1114,14 @@
     { label: 'Surface · 배경 / 표면', roles: {
       bg: '앱 최상위 배경', surface: '카드·패널 기본 표면',
       'surface-sunken': '입력·코드 등 오목한 영역', 'surface-raised': '떠 있는 표면(팝오버 등)',
-      'surface-hover': 'hover 상태 표면', overlay: '모달 뒤 스크림·오버레이' } },
+      'surface-hover': 'hover 상태 표면', 'surface-disabled': '비활성 컨트롤 배경', overlay: '모달 뒤 스크림·오버레이' } },
     { label: 'Text · 텍스트', roles: {
       text: '기본 본문 텍스트', 'text-muted': '보조 텍스트',
       'text-subtle': '가장 약한 텍스트·플레이스홀더', 'text-inverse': '어둡거나 강조된 배경 위 텍스트',
       'text-link': '링크 텍스트', 'text-disabled': '비활성 텍스트' } },
     { label: 'Border · 테두리', roles: {
       border: '기본 구분선·테두리', 'border-strong': '강조 테두리',
-      'border-subtle': '약한 구분선', 'border-focus': '포커스 링·활성 테두리' } },
+      'border-subtle': '약한 구분선', 'border-focus': '포커스 링·활성 테두리', 'border-disabled': '비활성 컨트롤 테두리' } },
     { label: 'Brand · 브랜드 / 상호작용', roles: {
       primary: '주요 버튼·링크·강조', 'primary-hover': 'primary hover 상태',
       'primary-active': 'primary 눌림(active) 상태', 'primary-fg': 'primary 위 텍스트·아이콘',
@@ -1340,7 +1340,8 @@
         btn(v('danger'), v('danger-fg'), 'Danger'),
         btn(v('warning'), v('warning-fg'), 'Warning'),
         btn(v('success'), v('success-fg'), 'Success'),
-        el('button', { type: 'button', class: 'sem-pv-btn sem-pv-btn-ghost', style: 'color:' + v('text') + ';border:1px solid ' + v('border-strong') }, ['Ghost'])
+        el('button', { type: 'button', class: 'sem-pv-btn sem-pv-btn-ghost', style: 'color:' + v('text') + ';border:1px solid ' + v('border-strong') }, ['Ghost']),
+        el('button', { type: 'button', class: 'sem-pv-btn', disabled: 'disabled', style: 'background:' + v('surface-disabled') + ';color:' + v('text-disabled') + ';border:1px solid ' + v('border-disabled') }, ['Disabled'])
       ]),
       el('div', { class: 'sem-pv-chips' }, [
         el('span', { class: 'sem-chip', style: 'background:' + v('primary-subtle') + ';color:' + v('text'), text: 'tag' }),
