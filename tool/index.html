@@ -658,20 +658,20 @@
           text:'{color.gray.900}', 'text-muted':'{color.gray.700}', 'text-subtle':'{color.gray.500}', 'text-inverse':'{color.white}', 'text-link':'{color.blue.700}', 'text-disabled':'{color.gray.400}',
           border:'{color.gray.200}', 'border-strong':'{color.gray.300}', 'border-subtle':'{color.gray.100}', 'border-focus':'{color.blue.500}',
           primary:'{color.blue.600}', 'primary-hover':'{color.blue.700}', 'primary-active':'{color.blue.800}', 'primary-fg':'{color.white}', 'primary-subtle':'{color.blue.50}', 'focus-ring':'{color.blue.500}', accent:'{color.blue.500}',
-          danger:'{color.red.600}', 'danger-fg':'{color.white}', 'danger-subtle':'{color.red.50}',
-          warning:'{color.amber.400}', 'warning-fg':'{color.gray.900}', 'warning-subtle':'{color.amber.50}',
-          success:'{color.green.700}', 'success-fg':'{color.white}', 'success-subtle':'{color.green.50}',
-          info:'{color.blue.600}', 'info-fg':'{color.white}', 'info-subtle':'{color.blue.50}'
+          danger:'{color.red.600}', 'danger-fg':'{color.white}', 'danger-subtle':'{color.red.50}', 'danger-on-subtle':'{color.red.700}',
+          warning:'{color.amber.400}', 'warning-fg':'{color.gray.900}', 'warning-subtle':'{color.amber.50}', 'warning-on-subtle':'{color.amber.900}',
+          success:'{color.green.700}', 'success-fg':'{color.white}', 'success-subtle':'{color.green.50}', 'success-on-subtle':'{color.green.700}',
+          info:'{color.blue.600}', 'info-fg':'{color.white}', 'info-subtle':'{color.blue.50}', 'info-on-subtle':'{color.blue.700}'
         },
         dark: {
           bg:'{color.gray.900}', surface:'{color.gray.800}', 'surface-sunken':'{color.gray.900}', 'surface-raised':'{color.gray.800}', 'surface-hover':'{color.gray.700}', overlay:'{color.black-alpha.60}',
           text:'{color.gray.50}', 'text-muted':'{color.gray.300}', 'text-subtle':'{color.gray.500}', 'text-inverse':'{color.gray.900}', 'text-link':'{color.blue.300}', 'text-disabled':'{color.gray.600}',
           border:'{color.gray.700}', 'border-strong':'{color.gray.600}', 'border-subtle':'{color.gray.800}', 'border-focus':'{color.blue.400}',
           primary:'{color.blue.600}', 'primary-hover':'{color.blue.700}', 'primary-active':'{color.blue.800}', 'primary-fg':'{color.white}', 'primary-subtle':'{color.blue.900}', 'focus-ring':'{color.blue.400}', accent:'{color.blue.400}',
-          danger:'{color.red.600}', 'danger-fg':'{color.white}', 'danger-subtle':'{color.red.900}',
-          warning:'{color.amber.400}', 'warning-fg':'{color.gray.900}', 'warning-subtle':'{color.amber.900}',
-          success:'{color.green.700}', 'success-fg':'{color.white}', 'success-subtle':'{color.green.900}',
-          info:'{color.blue.600}', 'info-fg':'{color.white}', 'info-subtle':'{color.blue.900}'
+          danger:'{color.red.600}', 'danger-fg':'{color.white}', 'danger-subtle':'{color.red.900}', 'danger-on-subtle':'{color.red.100}',
+          warning:'{color.amber.400}', 'warning-fg':'{color.gray.900}', 'warning-subtle':'{color.amber.900}', 'warning-on-subtle':'{color.amber.100}',
+          success:'{color.green.700}', 'success-fg':'{color.white}', 'success-subtle':'{color.green.900}', 'success-on-subtle':'{color.green.100}',
+          info:'{color.blue.600}', 'info-fg':'{color.white}', 'info-subtle':'{color.blue.900}', 'info-on-subtle':'{color.blue.100}'
         }
       },
       text: {
@@ -933,8 +933,9 @@
     { fg: 'primary-fg', bg: 'primary' }, { fg: 'primary-fg', bg: 'primary-hover' }, { fg: 'primary-fg', bg: 'primary-active' },
     { fg: 'danger-fg', bg: 'danger' },
     { fg: 'warning-fg', bg: 'warning' }, { fg: 'success-fg', bg: 'success' }, { fg: 'info-fg', bg: 'info' },
-    { fg: 'text', bg: 'primary-subtle' }, { fg: 'text', bg: 'danger-subtle' },
-    { fg: 'text', bg: 'warning-subtle' }, { fg: 'text', bg: 'success-subtle' }, { fg: 'text', bg: 'info-subtle' }
+    { fg: 'text', bg: 'primary-subtle' },
+    { fg: 'danger-on-subtle', bg: 'danger-subtle' }, { fg: 'warning-on-subtle', bg: 'warning-subtle' },
+    { fg: 'success-on-subtle', bg: 'success-subtle' }, { fg: 'info-on-subtle', bg: 'info-subtle' }
   ];
   // Contrast of each semantic pair for one theme ('light'|'dark'). ratio is null
   // when either role is missing (deleted/renamed) or resolves to a translucent
@@ -2121,10 +2122,10 @@
       'primary-active': 'primary 눌림(active) 상태', 'primary-fg': 'primary 위 텍스트·아이콘',
       'primary-subtle': 'primary 옅은 배경(배너·태그)', 'focus-ring': '포커스 링', accent: '보조 강조색' } },
     { label: 'Status · 상태', roles: {
-      danger: '위험·삭제·오류', 'danger-fg': 'danger 위 텍스트', 'danger-subtle': 'danger 옅은 배경',
-      warning: '주의·경고', 'warning-fg': 'warning 위 텍스트(어두운)', 'warning-subtle': 'warning 옅은 배경',
-      success: '성공·완료', 'success-fg': 'success 위 텍스트', 'success-subtle': 'success 옅은 배경',
-      info: '정보·안내', 'info-fg': 'info 위 텍스트', 'info-subtle': 'info 옅은 배경' } }
+      danger: '위험·삭제·오류', 'danger-fg': 'danger 위 텍스트', 'danger-subtle': 'danger 옅은 배경', 'danger-on-subtle': 'danger-subtle 위 텍스트',
+      warning: '주의·경고', 'warning-fg': 'warning 위 텍스트(어두운)', 'warning-subtle': 'warning 옅은 배경', 'warning-on-subtle': 'warning-subtle 위 텍스트',
+      success: '성공·완료', 'success-fg': 'success 위 텍스트', 'success-subtle': 'success 옅은 배경', 'success-on-subtle': 'success-subtle 위 텍스트',
+      info: '정보·안내', 'info-fg': 'info 위 텍스트', 'info-subtle': 'info 옅은 배경', 'info-on-subtle': 'info-subtle 위 텍스트' } }
   ];
   var SEM_USE = {
     text: { display: '초대형 디스플레이·히어로', h1: '페이지 제목 (H1)', h2: '주요 섹션 제목 (H2)',
@@ -2306,10 +2307,10 @@
     var c = C.resolveSemantic(cfg).color[theme] || {};
     function v(k, fb) { return c[k] || fb || 'transparent'; }
     function btn(bg, fg, label) { return el('button', { type: 'button', class: 'sem-pv-btn', style: 'background:' + bg + ';color:' + fg }, [label]); }
-    function banner(bg, dot, label) {
+    function banner(bg, dot, fg, label) {
       return el('div', { class: 'sem-pv-banner', style: 'background:' + bg }, [
         el('span', { class: 'sem-pv-dot', style: 'background:' + dot }),
-        el('span', { style: 'color:' + v('text'), text: label })
+        el('span', { style: 'color:' + fg, text: label })
       ]);
     }
     // Main surface card
@@ -2342,10 +2343,10 @@
     ]);
     // Status banners on *-subtle backgrounds
     var banners = el('div', { class: 'sem-pv-banners' }, [
-      banner(v('danger-subtle'), v('danger'), 'Danger message'),
-      banner(v('warning-subtle'), v('warning'), 'Warning message'),
-      banner(v('success-subtle'), v('success'), 'Success message'),
-      banner(v('info-subtle'), v('info'), 'Info message')
+      banner(v('danger-subtle'), v('danger'), v('danger-on-subtle'), 'Danger message'),
+      banner(v('warning-subtle'), v('warning'), v('warning-on-subtle'), 'Warning message'),
+      banner(v('success-subtle'), v('success'), v('success-on-subtle'), 'Success message'),
+      banner(v('info-subtle'), v('info'), v('info-on-subtle'), 'Info message')
     ]);
     // Raised surface chip + overlay scrim swatch
     var extras = el('div', { class: 'sem-pv-extras' }, [

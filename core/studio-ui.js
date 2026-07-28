@@ -1126,10 +1126,10 @@
       'primary-active': 'primary 눌림(active) 상태', 'primary-fg': 'primary 위 텍스트·아이콘',
       'primary-subtle': 'primary 옅은 배경(배너·태그)', 'focus-ring': '포커스 링', accent: '보조 강조색' } },
     { label: 'Status · 상태', roles: {
-      danger: '위험·삭제·오류', 'danger-fg': 'danger 위 텍스트', 'danger-subtle': 'danger 옅은 배경',
-      warning: '주의·경고', 'warning-fg': 'warning 위 텍스트(어두운)', 'warning-subtle': 'warning 옅은 배경',
-      success: '성공·완료', 'success-fg': 'success 위 텍스트', 'success-subtle': 'success 옅은 배경',
-      info: '정보·안내', 'info-fg': 'info 위 텍스트', 'info-subtle': 'info 옅은 배경' } }
+      danger: '위험·삭제·오류', 'danger-fg': 'danger 위 텍스트', 'danger-subtle': 'danger 옅은 배경', 'danger-on-subtle': 'danger-subtle 위 텍스트',
+      warning: '주의·경고', 'warning-fg': 'warning 위 텍스트(어두운)', 'warning-subtle': 'warning 옅은 배경', 'warning-on-subtle': 'warning-subtle 위 텍스트',
+      success: '성공·완료', 'success-fg': 'success 위 텍스트', 'success-subtle': 'success 옅은 배경', 'success-on-subtle': 'success-subtle 위 텍스트',
+      info: '정보·안내', 'info-fg': 'info 위 텍스트', 'info-subtle': 'info 옅은 배경', 'info-on-subtle': 'info-subtle 위 텍스트' } }
   ];
   var SEM_USE = {
     text: { display: '초대형 디스플레이·히어로', h1: '페이지 제목 (H1)', h2: '주요 섹션 제목 (H2)',
@@ -1311,10 +1311,10 @@
     var c = C.resolveSemantic(cfg).color[theme] || {};
     function v(k, fb) { return c[k] || fb || 'transparent'; }
     function btn(bg, fg, label) { return el('button', { type: 'button', class: 'sem-pv-btn', style: 'background:' + bg + ';color:' + fg }, [label]); }
-    function banner(bg, dot, label) {
+    function banner(bg, dot, fg, label) {
       return el('div', { class: 'sem-pv-banner', style: 'background:' + bg }, [
         el('span', { class: 'sem-pv-dot', style: 'background:' + dot }),
-        el('span', { style: 'color:' + v('text'), text: label })
+        el('span', { style: 'color:' + fg, text: label })
       ]);
     }
     // Main surface card
@@ -1347,10 +1347,10 @@
     ]);
     // Status banners on *-subtle backgrounds
     var banners = el('div', { class: 'sem-pv-banners' }, [
-      banner(v('danger-subtle'), v('danger'), 'Danger message'),
-      banner(v('warning-subtle'), v('warning'), 'Warning message'),
-      banner(v('success-subtle'), v('success'), 'Success message'),
-      banner(v('info-subtle'), v('info'), 'Info message')
+      banner(v('danger-subtle'), v('danger'), v('danger-on-subtle'), 'Danger message'),
+      banner(v('warning-subtle'), v('warning'), v('warning-on-subtle'), 'Warning message'),
+      banner(v('success-subtle'), v('success'), v('success-on-subtle'), 'Success message'),
+      banner(v('info-subtle'), v('info'), v('info-on-subtle'), 'Info message')
     ]);
     // Raised surface chip + overlay scrim swatch
     var extras = el('div', { class: 'sem-pv-extras' }, [

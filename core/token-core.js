@@ -94,20 +94,20 @@
           text:'{color.gray.900}', 'text-muted':'{color.gray.700}', 'text-subtle':'{color.gray.500}', 'text-inverse':'{color.white}', 'text-link':'{color.blue.700}', 'text-disabled':'{color.gray.400}',
           border:'{color.gray.200}', 'border-strong':'{color.gray.300}', 'border-subtle':'{color.gray.100}', 'border-focus':'{color.blue.500}',
           primary:'{color.blue.600}', 'primary-hover':'{color.blue.700}', 'primary-active':'{color.blue.800}', 'primary-fg':'{color.white}', 'primary-subtle':'{color.blue.50}', 'focus-ring':'{color.blue.500}', accent:'{color.blue.500}',
-          danger:'{color.red.600}', 'danger-fg':'{color.white}', 'danger-subtle':'{color.red.50}',
-          warning:'{color.amber.400}', 'warning-fg':'{color.gray.900}', 'warning-subtle':'{color.amber.50}',
-          success:'{color.green.700}', 'success-fg':'{color.white}', 'success-subtle':'{color.green.50}',
-          info:'{color.blue.600}', 'info-fg':'{color.white}', 'info-subtle':'{color.blue.50}'
+          danger:'{color.red.600}', 'danger-fg':'{color.white}', 'danger-subtle':'{color.red.50}', 'danger-on-subtle':'{color.red.700}',
+          warning:'{color.amber.400}', 'warning-fg':'{color.gray.900}', 'warning-subtle':'{color.amber.50}', 'warning-on-subtle':'{color.amber.900}',
+          success:'{color.green.700}', 'success-fg':'{color.white}', 'success-subtle':'{color.green.50}', 'success-on-subtle':'{color.green.700}',
+          info:'{color.blue.600}', 'info-fg':'{color.white}', 'info-subtle':'{color.blue.50}', 'info-on-subtle':'{color.blue.700}'
         },
         dark: {
           bg:'{color.gray.900}', surface:'{color.gray.800}', 'surface-sunken':'{color.gray.900}', 'surface-raised':'{color.gray.800}', 'surface-hover':'{color.gray.700}', overlay:'{color.black-alpha.60}',
           text:'{color.gray.50}', 'text-muted':'{color.gray.300}', 'text-subtle':'{color.gray.500}', 'text-inverse':'{color.gray.900}', 'text-link':'{color.blue.300}', 'text-disabled':'{color.gray.600}',
           border:'{color.gray.700}', 'border-strong':'{color.gray.600}', 'border-subtle':'{color.gray.800}', 'border-focus':'{color.blue.400}',
           primary:'{color.blue.600}', 'primary-hover':'{color.blue.700}', 'primary-active':'{color.blue.800}', 'primary-fg':'{color.white}', 'primary-subtle':'{color.blue.900}', 'focus-ring':'{color.blue.400}', accent:'{color.blue.400}',
-          danger:'{color.red.600}', 'danger-fg':'{color.white}', 'danger-subtle':'{color.red.900}',
-          warning:'{color.amber.400}', 'warning-fg':'{color.gray.900}', 'warning-subtle':'{color.amber.900}',
-          success:'{color.green.700}', 'success-fg':'{color.white}', 'success-subtle':'{color.green.900}',
-          info:'{color.blue.600}', 'info-fg':'{color.white}', 'info-subtle':'{color.blue.900}'
+          danger:'{color.red.600}', 'danger-fg':'{color.white}', 'danger-subtle':'{color.red.900}', 'danger-on-subtle':'{color.red.100}',
+          warning:'{color.amber.400}', 'warning-fg':'{color.gray.900}', 'warning-subtle':'{color.amber.900}', 'warning-on-subtle':'{color.amber.100}',
+          success:'{color.green.700}', 'success-fg':'{color.white}', 'success-subtle':'{color.green.900}', 'success-on-subtle':'{color.green.100}',
+          info:'{color.blue.600}', 'info-fg':'{color.white}', 'info-subtle':'{color.blue.900}', 'info-on-subtle':'{color.blue.100}'
         }
       },
       text: {
@@ -369,8 +369,9 @@
     { fg: 'primary-fg', bg: 'primary' }, { fg: 'primary-fg', bg: 'primary-hover' }, { fg: 'primary-fg', bg: 'primary-active' },
     { fg: 'danger-fg', bg: 'danger' },
     { fg: 'warning-fg', bg: 'warning' }, { fg: 'success-fg', bg: 'success' }, { fg: 'info-fg', bg: 'info' },
-    { fg: 'text', bg: 'primary-subtle' }, { fg: 'text', bg: 'danger-subtle' },
-    { fg: 'text', bg: 'warning-subtle' }, { fg: 'text', bg: 'success-subtle' }, { fg: 'text', bg: 'info-subtle' }
+    { fg: 'text', bg: 'primary-subtle' },
+    { fg: 'danger-on-subtle', bg: 'danger-subtle' }, { fg: 'warning-on-subtle', bg: 'warning-subtle' },
+    { fg: 'success-on-subtle', bg: 'success-subtle' }, { fg: 'info-on-subtle', bg: 'info-subtle' }
   ];
   // Contrast of each semantic pair for one theme ('light'|'dark'). ratio is null
   // when either role is missing (deleted/renamed) or resolves to a translucent
