@@ -1161,8 +1161,8 @@
     var opts = [];
     cfg.color.order.forEach(function (name) {
       var scale = cfg.color.scales[name] || {}, keys = Object.keys(scale);
-      if (keys.length === 1) opts.push({ ref: '{color.' + name + '}', label: name });
-      else keys.forEach(function (s) { opts.push({ ref: '{color.' + name + '.' + s + '}', label: name + ' / ' + s }); });
+      if (keys.length === 1) opts.push({ ref: '{color.' + name + '}', label: name, group: name });
+      else keys.forEach(function (s) { opts.push({ ref: '{color.' + name + '.' + s + '}', label: s, group: name }); });
     });
     return opts;
   }
@@ -1175,9 +1175,19 @@
   // options (points at a deleted/renamed primitive), a ⚠ broken option is shown.
   function refSelect(curRef, options, onpick) {
     var known = options.some(function (o) { return o.ref === curRef; });
-    var all = (known ? [] : [{ ref: curRef || '', label: '⚠ ' + (curRef || '(none)') }]).concat(options);
-    var sel = el('select', { class: 'sem-select', onchange: function (e) { onpick(e.target.value); } },
-      all.map(function (o) { return el('option', { value: o.ref }, [o.label]); }));
+    var broken = known ? [] : [el('option', { value: curRef || '' }, ['⚠ ' + (curRef || '(none)')])];
+    var body;
+    if (options.some(function (o) { return o.group; })) {
+      // Grouped (color): one <optgroup> per scale, in first-seen order.
+      var order = [], byGroup = {};
+      options.forEach(function (o) { var g = o.group || '·'; if (!byGroup[g]) { byGroup[g] = []; order.push(g); } byGroup[g].push(o); });
+      body = order.map(function (g) {
+        return el('optgroup', { label: g }, byGroup[g].map(function (o) { return el('option', { value: o.ref }, [o.label]); }));
+      });
+    } else {
+      body = options.map(function (o) { return el('option', { value: o.ref }, [o.label]); });
+    }
+    var sel = el('select', { class: 'sem-select', onchange: function (e) { onpick(e.target.value); } }, broken.concat(body));
     sel.value = curRef || '';
     return sel;
   }

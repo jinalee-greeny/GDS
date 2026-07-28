@@ -103,7 +103,7 @@
           bg:'{color.gray.900}', surface:'{color.gray.800}', 'surface-sunken':'{color.gray.900}', 'surface-raised':'{color.gray.800}', 'surface-hover':'{color.gray.700}', overlay:'{color.black-alpha.60}',
           text:'{color.gray.50}', 'text-muted':'{color.gray.300}', 'text-subtle':'{color.gray.500}', 'text-inverse':'{color.gray.900}', 'text-link':'{color.blue.300}', 'text-disabled':'{color.gray.600}',
           border:'{color.gray.700}', 'border-strong':'{color.gray.600}', 'border-subtle':'{color.gray.800}', 'border-focus':'{color.blue.400}',
-          primary:'{color.blue.600}', 'primary-hover':'{color.blue.500}', 'primary-active':'{color.blue.400}', 'primary-fg':'{color.white}', 'primary-subtle':'{color.blue.900}', 'focus-ring':'{color.blue.400}', accent:'{color.blue.400}',
+          primary:'{color.blue.600}', 'primary-hover':'{color.blue.700}', 'primary-active':'{color.blue.800}', 'primary-fg':'{color.white}', 'primary-subtle':'{color.blue.900}', 'focus-ring':'{color.blue.400}', accent:'{color.blue.400}',
           danger:'{color.red.600}', 'danger-fg':'{color.white}', 'danger-subtle':'{color.red.900}',
           warning:'{color.amber.400}', 'warning-fg':'{color.gray.900}', 'warning-subtle':'{color.amber.900}',
           success:'{color.green.700}', 'success-fg':'{color.white}', 'success-subtle':'{color.green.900}',
@@ -366,7 +366,8 @@
     { fg: 'text', bg: 'bg' }, { fg: 'text', bg: 'surface' }, { fg: 'text-muted', bg: 'surface' },
     { fg: 'text-link', bg: 'surface' }, { fg: 'text-muted', bg: 'bg' },
     // text-subtle / text-disabled are placeholder/disabled tier — WCAG-exempt, not checked.
-    { fg: 'primary-fg', bg: 'primary' }, { fg: 'danger-fg', bg: 'danger' },
+    { fg: 'primary-fg', bg: 'primary' }, { fg: 'primary-fg', bg: 'primary-hover' }, { fg: 'primary-fg', bg: 'primary-active' },
+    { fg: 'danger-fg', bg: 'danger' },
     { fg: 'warning-fg', bg: 'warning' }, { fg: 'success-fg', bg: 'success' }, { fg: 'info-fg', bg: 'info' },
     { fg: 'text', bg: 'primary-subtle' }, { fg: 'text', bg: 'danger-subtle' },
     { fg: 'text', bg: 'warning-subtle' }, { fg: 'text', bg: 'success-subtle' }, { fg: 'text', bg: 'info-subtle' }
