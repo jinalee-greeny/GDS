@@ -532,6 +532,7 @@
   .sem-a11y-skip { color: var(--muted-2); }
   .sem-a11y-cat td { padding-top: 14px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted-2); border-bottom: none; }
   .sem-a11y-cat:first-child td { padding-top: 2px; }
+  .sem-a11y-div { border: none; border-top: 1px solid var(--border); margin: 28px 0 20px; }
   .contrast-warn-row td { padding: 6px; }
   .contrast-warn { display: flex; align-items: flex-start; gap: 6px; padding: 6px 8px; border-radius: 4px;
     background: #fee2e2; color: #7f1d1d; font-size: 14px; }

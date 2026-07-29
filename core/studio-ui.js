@@ -1059,7 +1059,9 @@
   // A comprehensive accessibility view (its own domain, split out from Color):
   // per hue, the representative pass step at AA (4.5:1) and AAA (7:1) on both a
   // white and a black background. Steps are derived live via C.contrastRatio.
-  function renderAccessibilityView(cfg) {
+  // Primitive palette contrast — now a reference section inside the Semantic
+  // Accessibility view (returns section nodes, not a standalone block).
+  function primitivePaletteA11y(cfg) {
     var ramps = C.buildAllRamps(cfg);
     // Step names are arbitrary now, so pick by ORDER: 'first' = lightest passing
     // (white bg), 'last' = darkest passing (black bg).
@@ -1086,12 +1088,11 @@
       ]);
     });
     var table = el('table', { class: 'contrast-table' }, [el('thead', {}, [head]), el('tbody', {}, rows)]);
-    return el('div', { class: 'pv-block a11y-block' }, [
-      el('h3', { text: 'Accessibility (WCAG contrast)' }),
-      el('p', { class: 'pv-hint', text: '대비 기준 — 본문(작은 텍스트): AA 4.5:1, AAA 7:1. 큰 텍스트(18px 이상 또는 14px 볼드): AA 3:1, AAA 4.5:1.' }),
-      el('p', { class: 'pv-hint', text: '숫자 = 각 배경에서 본문으로 통과하는 대표 단계 (흰 배경 = 가장 밝은 통과 단계, 검은 배경 = 가장 어두운 통과 단계).' }),
+    return [
+      el('h4', { class: 'sem-a11y-th', text: 'Primitive palette · 참조' }),
+      el('p', { class: 'pv-hint', text: '각 램프에서 흰/검 배경에 본문으로 통과하는 대표 step (팔레트를 손볼 때 참고). 숫자 = 흰 배경은 가장 밝은 통과 단계, 검은 배경은 가장 어두운 통과 단계.' }),
       table
-    ]);
+    ];
   }
 
   // ---- Semantic layer editor -------------------------------------------------
@@ -1515,11 +1516,13 @@
       ]);
     }
     return el('div', { class: 'pv-block a11y-block' }, [
-      el('h3', { text: 'Semantic contrast (WCAG)' }),
+      el('h3', { text: 'Accessibility (WCAG contrast)' }),
       el('p', { class: 'pv-hint', text: '시스템이 정한 fg↔bg 조합의 대비를 라이트/다크 각각 검사합니다. 기준 — 본문(작은 텍스트): AA 4.5:1, 큰 텍스트(18px+/14px 볼드): AA 3:1. 반투명·깨진 참조 짝은 n/a.' }),
+      el('h4', { class: 'sem-a11y-th', text: 'Semantic pairs' }),
       themeTable('light'),
-      themeTable('dark')
-    ]);
+      themeTable('dark'),
+      el('hr', { class: 'sem-a11y-div' })
+    ].concat(primitivePaletteA11y(cfg)));
   }
 
   var DOMAINS = [
@@ -1528,8 +1531,8 @@
     { key: 'spacing', label: 'Spacing & Sizing', category: 'spacing', preview: ['pv-spacing', 'pv-radius', 'pv-border'] },
     { key: 'effects', label: 'Effects', category: 'effects', preview: ['pv-shadow', 'pv-opacity'] },
     { key: 'motion', label: 'Motion', category: 'motion', preview: ['pv-motion'] },
-    { key: 'layout', label: 'Layout', category: 'layout', preview: ['pv-layout'] },
-    { key: 'a11y', label: 'Accessibility', full: 'a11y' }
+    { key: 'layout', label: 'Layout', category: 'layout', preview: ['pv-layout'] }
+    // Accessibility lives under Semantic now (semantic pairs + primitive palette reference).
   ];
   // Semantic layer: each module is its own domain (Color/Text/Radius/Shadow/Space).
   var SEMANTIC_DOMAINS = [
@@ -1628,9 +1631,8 @@
     // Semantic, Accessibility (derived from Color) and Export.
     if (domain.full) {
       var content = domain.full === 'export' ? extrasArr
-        : domain.full === 'semantic' ? [renderSemanticView(cfg, domain.semKey)]
         : domain.full === 'semantic-a11y' ? [renderSemanticA11y(cfg)]
-        : [renderAccessibilityView(cfg)];
+        : [renderSemanticView(cfg, domain.semKey)];
       var fullCol = el('div', { class: 'preview-col' },
         [el('div', { class: 'preview-body', id: 'preview-col' }, content)]);
       app.appendChild(el('div', { class: 'app-body app-body-single' }, [fullCol]));
